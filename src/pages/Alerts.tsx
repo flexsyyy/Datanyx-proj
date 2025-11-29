@@ -62,7 +62,7 @@ const initialAlerts: Alert[] = [
     id: 4,
     severity: "warning",
     title: "Temperature trending high",
-    description: "Temperature reached 26°C, which may stress developing primordia.",
+    description: "Temperature reached a high level, which may stress developing primordia.",
     chamber: "Chamber B2",
     time: "2h ago",
     action: "Activate cooling system",
@@ -168,7 +168,7 @@ export default function Alerts() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-20">
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Alerts</h1>

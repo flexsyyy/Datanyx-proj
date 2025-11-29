@@ -4,12 +4,72 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Download, TrendingUp, TrendingDown, BarChart3, Calendar as CalendarIcon, FileDown } from "lucide-react";
 import { DateRange } from "react-day-picker";
-import { format, subDays } from "date-fns";
+import { format, subDays, isWithinInterval, startOfDay, endOfDay, parseISO } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useUnits } from "@/contexts/UnitsContext";
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  ScatterChart,
+  Scatter,
+  Cell,
+} from "recharts";
+
+// Generate sample data for charts
+const generateYieldData = () => {
+  const data = [];
+  for (let i = 60; i >= 0; i--) {
+    const date = subDays(new Date(), i);
+    data.push({
+      date: format(date, "yyyy-MM-dd"),
+      yield: 40 + Math.random() * 20 + Math.sin(i / 10) * 5,
+      target: 50,
+    });
+  }
+  return data;
+};
+
+const generateEnvironmentData = () => {
+  const data = [];
+  for (let i = 60; i >= 0; i--) {
+    const date = subDays(new Date(), i);
+    data.push({
+      date: format(date, "yyyy-MM-dd"),
+      temperature: 22 + Math.random() * 4 + Math.sin(i / 15) * 2,
+      humidity: 82 + Math.random() * 10 + Math.cos(i / 12) * 3,
+      co2: 800 + Math.random() * 400 + Math.sin(i / 8) * 100,
+    });
+  }
+  return data;
+};
+
+const generateCorrelationData = () => {
+  const params = [
+    { name: "Temperature", correlation: 0.72, color: "hsl(0, 72%, 51%)" },
+    { name: "Humidity", correlation: 0.68, color: "hsl(199, 89%, 48%)" },
+    { name: "CO2 Level", correlation: -0.45, color: "hsl(35, 92%, 50%)" },
+    { name: "Airflow", correlation: 0.55, color: "hsl(142, 43%, 24%)" },
+    { name: "Substrate Moisture", correlation: 0.61, color: "hsl(75, 45%, 45%)" },
+  ];
+  return params;
+};
+
+const yieldData = generateYieldData();
+const environmentData = generateEnvironmentData();
+const correlationData = generateCorrelationData();
 
 export default function Reports() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
@@ -17,7 +77,36 @@ export default function Reports() {
     to: new Date(),
   });
   const { toast } = useToast();
-  const { formatWeight, weightUnit } = useUnits();
+  const { formatWeight, formatTemperature, weightUnit, temperatureUnit } = useUnits();
+
+  // Filter data based on date range
+  const filteredYieldData = useMemo(() => {
+    if (!dateRange?.from || !dateRange?.to) return yieldData;
+    const startDate = startOfDay(dateRange.from);
+    const endDate = endOfDay(dateRange.to);
+    return yieldData.filter((d) => {
+      const dataDate = startOfDay(parseISO(d.date));
+      return isWithinInterval(dataDate, { start: startDate, end: endDate });
+    }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [dateRange]);
+
+  const filteredEnvironmentData = useMemo(() => {
+    if (!dateRange?.from || !dateRange?.to) {
+      return environmentData.map(d => ({
+        ...d,
+        temperature: temperatureUnit === "°F" ? (d.temperature * 9/5) + 32 : d.temperature
+      }));
+    }
+    const startDate = startOfDay(dateRange.from);
+    const endDate = endOfDay(dateRange.to);
+    return environmentData.filter((d) => {
+      const dataDate = startOfDay(parseISO(d.date));
+      return isWithinInterval(dataDate, { start: startDate, end: endDate });
+    }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(d => ({
+      ...d,
+      temperature: temperatureUnit === "°F" ? (d.temperature * 9/5) + 32 : d.temperature
+    }));
+  }, [dateRange, temperatureUnit]);
 
   const handleExport = (format: "pdf" | "csv" | "excel") => {
     toast({
@@ -36,7 +125,7 @@ export default function Reports() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-20">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Reports</h1>
@@ -166,9 +255,72 @@ export default function Reports() {
                   </span>
                 )}
               </h3>
-              <div className="h-64 bg-muted/30 rounded-lg flex items-center justify-center">
-                <p className="text-muted-foreground">Chart placeholder</p>
-              </div>
+              {filteredYieldData.length === 0 ? (
+                <div className="h-64 bg-muted/30 rounded-lg flex items-center justify-center">
+                  <p className="text-muted-foreground">No data available for the selected date range</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={256}>
+                  <AreaChart data={filteredYieldData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(v) => {
+                        try {
+                          return format(parseISO(v), "MMM d");
+                        } catch {
+                          return format(new Date(v), "MMM d");
+                        }
+                      }}
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={11}
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                      interval={Math.floor(filteredYieldData.length / 8)}
+                    />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                      }}
+                      labelFormatter={(v) => {
+                        try {
+                          return format(parseISO(v), "MMM d, yyyy");
+                        } catch {
+                          return format(new Date(v), "MMM d, yyyy");
+                        }
+                      }}
+                      formatter={(value: number, name: string) => {
+                        if (name.includes("Yield")) {
+                          return [formatWeight(value), name];
+                        }
+                        return [value, name];
+                      }}
+                    />
+                    <Legend />
+                    <Area
+                      type="monotone"
+                      dataKey="yield"
+                      name={`Yield (${weightUnit})`}
+                      stroke="hsl(142, 43%, 24%)"
+                      fill="hsl(142, 43%, 24%, 0.2)"
+                      strokeWidth={2}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="target"
+                      name="Target"
+                      stroke="hsl(0, 72%, 51%)"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      dot={false}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
             </Card>
 
             <Card className="p-6">
@@ -206,12 +358,91 @@ export default function Reports() {
             <Card className="p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">
                 Environmental Stability Score
+                {dateRange?.from && dateRange?.to && (
+                  <span className="text-sm font-normal text-muted-foreground ml-2">
+                    ({format(dateRange.from, "MMM d")} - {format(dateRange.to, "MMM d, yyyy")})
+                  </span>
+                )}
               </h3>
-              <div className="h-80 bg-muted/30 rounded-lg flex items-center justify-center">
-                <p className="text-muted-foreground">
-                  Temperature, Humidity, CO2 trends over time
-                </p>
-              </div>
+              {filteredEnvironmentData.length === 0 ? (
+                <div className="h-80 bg-muted/30 rounded-lg flex items-center justify-center">
+                  <p className="text-muted-foreground">No data available for the selected date range</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={320}>
+                  <LineChart data={filteredEnvironmentData} margin={{ top: 5, right: 10, left: 0, bottom: 60 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(v) => {
+                        try {
+                          return format(parseISO(v), "MMM d");
+                        } catch {
+                          return format(new Date(v), "MMM d");
+                        }
+                      }}
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={11}
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                      interval={Math.floor(filteredEnvironmentData.length / 8)}
+                    />
+                    <YAxis yAxisId="left" stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={11}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                      }}
+                      labelFormatter={(v) => {
+                        try {
+                          return format(parseISO(v), "MMM d, yyyy");
+                        } catch {
+                          return format(new Date(v), "MMM d, yyyy");
+                        }
+                      }}
+                    />
+                    <Legend />
+                    <Line
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="temperature"
+                      name={`Temperature (${temperatureUnit})`}
+                      stroke="hsl(0, 72%, 51%)"
+                      strokeWidth={2}
+                      dot={false}
+                      activeDot={{ r: 6 }}
+                    />
+                    <Line
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="humidity"
+                      name="Humidity (%)"
+                      stroke="hsl(199, 89%, 48%)"
+                      strokeWidth={2}
+                      dot={false}
+                      activeDot={{ r: 6 }}
+                    />
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="co2"
+                      name="CO2 (ppm)"
+                      stroke="hsl(35, 92%, 50%)"
+                      strokeWidth={2}
+                      dot={false}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
             </Card>
           </TabsContent>
 
@@ -220,10 +451,53 @@ export default function Reports() {
               <h3 className="text-lg font-semibold text-foreground mb-4">
                 Yield vs Environment Correlation
               </h3>
-              <div className="h-80 bg-muted/30 rounded-lg flex items-center justify-center">
-                <p className="text-muted-foreground">
-                  Correlation analysis between environment parameters and yield
+              <div className="relative">
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-16 transform -rotate-90 whitespace-nowrap text-sm text-muted-foreground font-medium z-10">
+                  Correlation Coefficient
+                </div>
+                <ResponsiveContainer width="100%" height={320}>
+                  <BarChart data={correlationData} margin={{ top: 5, right: 30, left: 20, bottom: 80 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis
+                      dataKey="name"
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={11}
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                      interval={0}
+                    />
+                    <YAxis
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={11}
+                      domain={[-1, 1]}
+                      width={50}
+                    />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "8px",
+                    }}
+                    formatter={(value: number) => value.toFixed(2)}
+                  />
+                  <Bar dataKey="correlation" name="Correlation" radius={[4, 4, 0, 0]}>
+                    {correlationData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-4 p-4 bg-muted/30 rounded-lg">
+                <p className="text-sm text-muted-foreground mb-2">
+                  <strong>Correlation Interpretation:</strong>
                 </p>
+                <ul className="text-xs text-muted-foreground space-y-1">
+                  <li>• Values close to +1 indicate strong positive correlation with yield</li>
+                  <li>• Values close to -1 indicate strong negative correlation with yield</li>
+                  <li>• Values close to 0 indicate weak or no correlation</li>
+                </ul>
               </div>
             </Card>
           </TabsContent>

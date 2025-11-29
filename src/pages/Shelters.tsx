@@ -65,6 +65,8 @@ const shelters = [
 
 export default function Shelters() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [selectedShelter, setSelectedShelter] = useState<typeof shelters[0] | null>(null);
   const [newShelter, setNewShelter] = useState({
     name: "",
     species: "",
@@ -81,6 +83,11 @@ export default function Shelters() {
     console.log("Adding shelter:", newShelter);
     setIsAddModalOpen(false);
     setNewShelter({ name: "", species: "", stage: "spawn" });
+  };
+
+  const handleViewDetails = (shelter: typeof shelters[0]) => {
+    setSelectedShelter(shelter);
+    setIsDetailsModalOpen(true);
   };
 
   const renderShelterCard = (shelter: typeof shelters[0]) => (
@@ -168,7 +175,11 @@ export default function Shelters() {
           <Calendar className="h-4 w-4" />
           {shelter.lastEvent}
         </div>
-        <Button variant="outline" size="sm">
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={() => handleViewDetails(shelter)}
+        >
           View Details
         </Button>
       </div>
@@ -178,7 +189,7 @@ export default function Shelters() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-20">
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Shelters</h1>
@@ -223,6 +234,134 @@ export default function Shelters() {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Chamber Details Modal */}
+        <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-3">
+                {selectedShelter?.name}
+                <Badge
+                  variant={
+                    selectedShelter?.status === "optimal"
+                      ? "default"
+                      : selectedShelter?.status === "warning"
+                      ? "secondary"
+                      : "destructive"
+                  }
+                >
+                  {selectedShelter?.status}
+                </Badge>
+              </DialogTitle>
+              <DialogDescription>
+                Detailed information about this mushroom growing chamber
+              </DialogDescription>
+            </DialogHeader>
+            {selectedShelter && (
+              <div className="grid gap-6 py-4">
+                {/* Basic Information */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
+                    Basic Information
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Species</p>
+                      <p className="text-sm font-medium text-foreground">{selectedShelter.species}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Growth Stage</p>
+                      <p className="text-sm font-medium text-foreground">{selectedShelter.stage}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Health Score</p>
+                      <p className="text-lg font-bold text-success">{selectedShelter.health}%</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Chamber ID</p>
+                      <p className="text-sm font-medium text-foreground">{selectedShelter.id}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Environmental Conditions */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
+                    Environmental Conditions
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                          <Thermometer className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Temperature</p>
+                          <p className="text-lg font-semibold text-foreground">
+                            {formatTemperature(selectedShelter.temp)}{temperatureUnit}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-accent/10 rounded-lg">
+                          <Droplets className="h-5 w-5 text-accent" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Humidity</p>
+                          <p className="text-lg font-semibold text-foreground">
+                            {selectedShelter.humidity}%
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-muted rounded-lg">
+                          <Wind className="h-5 w-5 text-foreground" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">CO2 Level</p>
+                          <p className="text-lg font-semibold text-foreground">
+                            {selectedShelter.co2} ppm
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                          <Activity className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Status</p>
+                          <p className="text-lg font-semibold text-foreground">Active</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recent Activity */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">
+                    Recent Activity
+                  </h3>
+                  <div className="flex items-center gap-2 p-4 bg-muted/30 rounded-lg border border-border/50">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <p className="text-sm text-foreground">{selectedShelter.lastEvent}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDetailsModalOpen(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Add New Shelter Modal */}
         <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>

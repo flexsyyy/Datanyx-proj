@@ -72,7 +72,7 @@ function HealthIndex({ value, label }: { value: number; label: string }) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { formatTemperature, temperatureUnit } = useUnits();
+  const { formatTemperature, formatSpeed, temperatureUnit, speedUnit } = useUnits();
 
   const alerts = [
     {
@@ -135,7 +135,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background">
       <Navigation />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-20">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">
@@ -150,11 +150,11 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <KPICard
             title="Temperature"
-            value={24.5}
-            unit="°C"
+            value={formatTemperature(24.5)}
+            unit={temperatureUnit}
             trend="stable"
-            trendValue="±0.2°C"
-            optimal="22-26°C"
+            trendValue={`±${formatTemperature(0.2)}`}
+            optimal={`${formatTemperature(22)}-${formatTemperature(26)}${temperatureUnit}`}
             status="normal"
             icon={<Thermometer className="h-5 w-5" />}
           />
@@ -180,11 +180,11 @@ export default function Dashboard() {
           />
           <KPICard
             title="Airflow"
-            value={3.2}
-            unit="m/s"
+            value={formatSpeed(3.2)}
+            unit={speedUnit}
             trend="stable"
-            trendValue="±0.1"
-            optimal="2.5-4.0"
+            trendValue={`±${formatSpeed(0.1)}`}
+            optimal={`${formatSpeed(2.5)}-${formatSpeed(4.0)}`}
             status="normal"
             icon={<Activity className="h-5 w-5" />}
           />

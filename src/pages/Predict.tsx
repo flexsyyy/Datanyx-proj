@@ -40,9 +40,10 @@ import {
   FileSpreadsheet,
   Leaf,
 } from "lucide-react";
-import { format, subDays, isWithinInterval } from "date-fns";
+import { format, subDays, isWithinInterval, startOfDay, endOfDay, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { DateRange } from "react-day-picker";
+import { useUnits } from "@/contexts/UnitsContext";
 
 // Types
 interface PredictionResult {
@@ -91,6 +92,7 @@ const generateHistoricalData = (): HistoricalDataPoint[] => {
 const historicalData = generateHistoricalData();
 
 export default function Predict() {
+  const { formatTemperature, formatWeight, formatSpeed, temperatureUnit, weightUnit, speedUnit } = useUnits();
   const [formData, setFormData] = useState<EnvironmentalData>({
     temperature: 24,
     humidity: 85,
@@ -109,10 +111,35 @@ export default function Predict() {
 
   const filteredData = useMemo(() => {
     if (!dateRange?.from || !dateRange?.to) return historicalData;
-    return historicalData.filter((d) => {
-      const date = new Date(d.date);
-      return isWithinInterval(date, { start: dateRange.from!, end: dateRange.to! });
+    
+    // Normalize dates to start of day for proper comparison
+    const startDate = startOfDay(dateRange.from);
+    const endDate = endOfDay(dateRange.to);
+    
+    const filtered = historicalData.filter((d) => {
+      const dataDate = startOfDay(parseISO(d.date));
+      return isWithinInterval(dataDate, { start: startDate, end: endDate });
     });
+    
+    // Sort by date to ensure proper ordering
+    return filtered.sort((a, b) => {
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
+  }, [dateRange]);
+
+  // Calculate optimal tick interval based on data length
+  const xAxisInterval = useMemo(() => {
+    const dataLength = filteredData.length;
+    if (dataLength <= 7) return 0; // Show all ticks
+    if (dataLength <= 14) return 1; // Show every other tick
+    if (dataLength <= 30) return Math.floor(dataLength / 7); // Show ~7 ticks
+    return Math.floor(dataLength / 10); // Show ~10 ticks for larger ranges
+  }, [filteredData.length]);
+
+  // Create a unique key for chart re-rendering based on date range
+  const chartKey = useMemo(() => {
+    if (!dateRange?.from || !dateRange?.to) return 'default';
+    return `${format(dateRange.from, 'yyyy-MM-dd')}-${format(dateRange.to, 'yyyy-MM-dd')}`;
   }, [dateRange]);
 
   const handlePredict = () => {
@@ -161,7 +188,7 @@ export default function Predict() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-20">
         <div className="mb-8 animate-fade-in">
           <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
             <div className="p-2 bg-primary/10 rounded-lg">
@@ -201,7 +228,7 @@ export default function Predict() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="temperature" className="flex items-center gap-2">
-                  <Thermometer className="h-4 w-4 text-primary" /> Temperature (°C)
+                  <Thermometer className="h-4 w-4 text-primary" /> Temperature ({temperatureUnit})
                 </Label>
                 <Input
                   id="temperature"
@@ -247,7 +274,7 @@ export default function Predict() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="airflow" className="flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-accent" /> Airflow (m/s)
+                  <Activity className="h-4 w-4 text-accent" /> Airflow ({speedUnit})
                 </Label>
                 <Input
                   id="airflow"
@@ -333,14 +360,14 @@ export default function Predict() {
                   <div className="text-center p-4 bg-muted/50 rounded-xl">
                     <p className="text-sm text-muted-foreground mb-1">Predicted Yield</p>
                     <p className="text-4xl font-bold text-primary animate-count-up">
-                      {prediction.yieldAmount.toFixed(1)} kg
+                      {formatWeight(prediction.yieldAmount)} {weightUnit}
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="text-center p-3 bg-muted/30 rounded-lg">
                       <p className="text-xs text-muted-foreground mb-1">Harvest per Cycle</p>
                       <p className="text-lg font-semibold text-foreground">
-                        {(prediction.yieldAmount * 0.85).toFixed(1)} kg
+                        {formatWeight(prediction.yieldAmount * 0.85)} {weightUnit}
                       </p>
                     </div>
                     <div className="text-center p-3 bg-muted/30 rounded-lg">
@@ -410,27 +437,57 @@ export default function Predict() {
 
           <div className="grid lg:grid-cols-2 gap-6">
             {/* Yield Comparison Chart */}
-            <div className="h-80">
-              <h3 className="text-sm font-medium text-muted-foreground mb-4">Predicted vs Actual Yield (kg)</h3>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={filteredData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis
-                    dataKey="date"
-                    tickFormatter={(v) => format(new Date(v), "MMM d")}
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
+            <div className="h-80 w-full overflow-hidden">
+              <h3 className="text-sm font-medium text-muted-foreground mb-4">Predicted vs Actual Yield ({weightUnit})</h3>
+              {filteredData.length === 0 ? (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  <p>No data available for the selected date range</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%" key={`line-${chartKey}`}>
+                  <LineChart 
+                    data={filteredData}
+                    margin={{ top: 5, right: 10, left: 0, bottom: 60 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(v) => {
+                        try {
+                          return format(parseISO(v), "MMM d");
+                        } catch {
+                          return format(new Date(v), "MMM d");
+                        }
+                      }}
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={11}
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                      interval={xAxisInterval}
+                      minTickGap={10}
+                    />
+                  <YAxis 
+                    stroke="hsl(var(--muted-foreground))" 
+                    fontSize={11}
+                    domain={['auto', 'auto']}
+                    width={50}
                   />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "hsl(var(--card))",
                       border: "1px solid hsl(var(--border))",
                       borderRadius: "8px",
                     }}
-                    labelFormatter={(v) => format(new Date(v), "MMM d, yyyy")}
+                    labelFormatter={(v) => {
+                      try {
+                        return format(parseISO(v), "MMM d, yyyy");
+                      } catch {
+                        return format(new Date(v), "MMM d, yyyy");
+                      }
+                    }}
                   />
-                  <Legend />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} />
                   <Line
                     type="monotone"
                     dataKey="predictedYield"
@@ -449,36 +506,67 @@ export default function Predict() {
                     dot={false}
                     activeDot={{ r: 6 }}
                   />
-                </LineChart>
-              </ResponsiveContainer>
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
             </div>
 
             {/* Environmental Trends Chart */}
-            <div className="h-80">
+            <div className="h-80 w-full overflow-hidden">
               <h3 className="text-sm font-medium text-muted-foreground mb-4">Environmental Parameters</h3>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={filteredData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis
-                    dataKey="date"
-                    tickFormatter={(v) => format(new Date(v), "MMM d")}
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
+              {filteredData.length === 0 ? (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  <p>No data available for the selected date range</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%" key={`area-${chartKey}`}>
+                  <AreaChart 
+                    data={filteredData}
+                    margin={{ top: 5, right: 10, left: 0, bottom: 60 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(v) => {
+                        try {
+                          return format(parseISO(v), "MMM d");
+                        } catch {
+                          return format(new Date(v), "MMM d");
+                        }
+                      }}
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={11}
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                      interval={xAxisInterval}
+                      minTickGap={10}
+                    />
+                  <YAxis 
+                    stroke="hsl(var(--muted-foreground))" 
+                    fontSize={11}
+                    domain={['auto', 'auto']}
+                    width={50}
                   />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "hsl(var(--card))",
                       border: "1px solid hsl(var(--border))",
                       borderRadius: "8px",
                     }}
-                    labelFormatter={(v) => format(new Date(v), "MMM d, yyyy")}
+                    labelFormatter={(v) => {
+                      try {
+                        return format(parseISO(v), "MMM d, yyyy");
+                      } catch {
+                        return format(new Date(v), "MMM d, yyyy");
+                      }
+                    }}
                   />
-                  <Legend />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} />
                   <Area
                     type="monotone"
                     dataKey="temperature"
-                    name="Temp (°C)"
+                    name={`Temp (${temperatureUnit})`}
                     stroke="hsl(0, 72%, 51%)"
                     fill="hsl(0, 72%, 51%, 0.1)"
                     strokeWidth={2}
@@ -491,8 +579,9 @@ export default function Predict() {
                     fill="hsl(199, 89%, 48%, 0.1)"
                     strokeWidth={2}
                   />
-                </AreaChart>
-              </ResponsiveContainer>
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </div>
         </Card>

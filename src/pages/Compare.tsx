@@ -26,6 +26,7 @@ import {
   ReferenceArea,
 } from "recharts";
 import { X, BarChart3, LineChartIcon, GitCompare, Leaf } from "lucide-react";
+import { useUnits } from "@/contexts/UnitsContext";
 
 // Mushroom types and their optimal parameters
 const mushroomData = {
@@ -56,31 +57,35 @@ const mushroomData = {
   },
 };
 
-const parameters = [
-  { id: "temperature", label: "Temperature (°C)", unit: "°C", optimal: { min: 18, max: 26 } },
+// Parameters will be created dynamically based on units
+const createParameters = (temperatureUnit: string, speedUnit: string, weightUnit: string) => [
+  { id: "temperature", label: `Temperature (${temperatureUnit})`, unit: temperatureUnit, optimal: { min: 18, max: 26 } },
   { id: "humidity", label: "Humidity (%)", unit: "%", optimal: { min: 75, max: 95 } },
   { id: "co2", label: "CO2 Level (ppm)", unit: "ppm", optimal: { min: 600, max: 1000 } },
-  { id: "airflow", label: "Airflow (m/s)", unit: "m/s", optimal: { min: 2.0, max: 4.0 } },
+  { id: "airflow", label: `Airflow (${speedUnit})`, unit: speedUnit, optimal: { min: 2.0, max: 4.0 } },
   { id: "substrateMoisture", label: "Substrate Moisture (%)", unit: "%", optimal: { min: 55, max: 75 } },
   { id: "growthRate", label: "Growth Rate (cm/day)", unit: "cm/day", optimal: { min: 2, max: 6 } },
-  { id: "yieldPerBatch", label: "Yield per Batch (kg)", unit: "kg", optimal: { min: 20, max: 60 } },
+  { id: "yieldPerBatch", label: `Yield per Batch (${weightUnit})`, unit: weightUnit, optimal: { min: 20, max: 60 } },
 ];
 
 type MushroomKey = keyof typeof mushroomData;
 type ParameterKey = keyof typeof mushroomData.oyster.params;
 
 export default function Compare() {
+  const { formatTemperature, formatWeight, formatSpeed, temperatureUnit, weightUnit, speedUnit } = useUnits();
   const [selectedMushrooms, setSelectedMushrooms] = useState<MushroomKey[]>(["oyster", "shiitake"]);
   const [selectedParams, setSelectedParams] = useState<ParameterKey[]>(["temperature", "humidity", "yieldPerBatch"]);
   const [chartType, setChartType] = useState<"line" | "bar">("bar");
   const [addingMushroom, setAddingMushroom] = useState<string>("");
+
+  const parameters = useMemo(() => createParameters(temperatureUnit, speedUnit, weightUnit), [temperatureUnit, speedUnit, weightUnit]);
 
   const availableMushrooms = Object.entries(mushroomData)
     .filter(([key]) => !selectedMushrooms.includes(key as MushroomKey))
     .map(([key, val]) => ({ key, name: val.name }));
 
   const handleAddMushroom = (key: string) => {
-    if (key && selectedMushrooms.length < 4) {
+    if (key && !selectedMushrooms.includes(key as MushroomKey)) {
       setSelectedMushrooms([...selectedMushrooms, key as MushroomKey]);
       setAddingMushroom("");
     }
@@ -103,18 +108,40 @@ export default function Compare() {
       const param = parameters.find((p) => p.id === paramId)!;
       const dataPoint: Record<string, string | number> = { name: param.label };
       selectedMushrooms.forEach((mushKey) => {
-        dataPoint[mushroomData[mushKey].name] = mushroomData[mushKey].params[paramId];
+        let value = mushroomData[mushKey].params[paramId];
+        // Convert values based on parameter type
+        if (paramId === "temperature" && temperatureUnit === "°F") {
+          value = (value * 9/5) + 32;
+        } else if (paramId === "airflow" && speedUnit === "ft/s") {
+          value = value * 3.28084;
+        } else if (paramId === "yieldPerBatch" && weightUnit === "lb") {
+          value = value * 2.20462;
+        }
+        dataPoint[mushroomData[mushKey].name] = value;
       });
-      dataPoint.optimalMin = param.optimal.min;
-      dataPoint.optimalMax = param.optimal.max;
+      // Convert optimal ranges
+      let optimalMin = param.optimal.min;
+      let optimalMax = param.optimal.max;
+      if (paramId === "temperature" && temperatureUnit === "°F") {
+        optimalMin = (optimalMin * 9/5) + 32;
+        optimalMax = (optimalMax * 9/5) + 32;
+      } else if (paramId === "airflow" && speedUnit === "ft/s") {
+        optimalMin = optimalMin * 3.28084;
+        optimalMax = optimalMax * 3.28084;
+      } else if (paramId === "yieldPerBatch" && weightUnit === "lb") {
+        optimalMin = optimalMin * 2.20462;
+        optimalMax = optimalMax * 2.20462;
+      }
+      dataPoint.optimalMin = optimalMin;
+      dataPoint.optimalMax = optimalMax;
       return dataPoint;
     });
-  }, [selectedMushrooms, selectedParams]);
+  }, [selectedMushrooms, selectedParams, parameters, temperatureUnit, speedUnit, weightUnit]);
 
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-20">
         {/* Header */}
         <div className="mb-8 animate-fade-in">
           <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
@@ -158,7 +185,7 @@ export default function Compare() {
                 </div>
               ))}
             </div>
-            {selectedMushrooms.length < 4 && (
+            {availableMushrooms.length > 0 && (
               <Select value={addingMushroom} onValueChange={handleAddMushroom}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Add mushroom..." />
@@ -172,7 +199,12 @@ export default function Compare() {
                 </SelectContent>
               </Select>
             )}
-            <p className="text-xs text-muted-foreground mt-2">Select 2-4 mushroom types</p>
+            {availableMushrooms.length === 0 && (
+              <p className="text-xs text-muted-foreground mt-2">All mushroom types selected</p>
+            )}
+            {availableMushrooms.length > 0 && (
+              <p className="text-xs text-muted-foreground mt-2">Select mushroom types to compare</p>
+            )}
           </Card>
 
           {/* Parameter Selection */}

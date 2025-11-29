@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import { Thermometer, Droplets, Wind, Activity, Radio } from "lucide-react";
 import { format } from "date-fns";
+import { useUnits } from "@/contexts/UnitsContext";
 
 interface DataPoint {
   time: string;
@@ -138,6 +139,7 @@ function LiveChart({ data, color, unit, optimalMin, optimalMax, title, yDomain }
 
 // Main component continues...
 export default function LiveMonitor() {
+  const { formatTemperature, formatSpeed, temperatureUnit, speedUnit } = useUnits();
   const [sensorData, setSensorData] = useState<SensorData>(createInitialData);
   const [isLive, setIsLive] = useState(true);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -163,15 +165,24 @@ export default function LiveMonitor() {
     return "normal";
   };
 
-  const temp = getLatestValue(sensorData.temperature);
+  // Convert temperature and airflow for display
+  const tempRaw = getLatestValue(sensorData.temperature);
+  const temp = temperatureUnit === "°F" ? (tempRaw * 9/5) + 32 : tempRaw;
   const hum = getLatestValue(sensorData.humidity);
   const co2 = getLatestValue(sensorData.co2);
-  const air = getLatestValue(sensorData.airflow);
+  const airRaw = getLatestValue(sensorData.airflow);
+  const air = speedUnit === "ft/s" ? airRaw * 3.28084 : airRaw;
+  
+  // Convert optimal ranges for temperature and airflow
+  const tempMin = temperatureUnit === "°F" ? (22 * 9/5) + 32 : 22;
+  const tempMax = temperatureUnit === "°F" ? (26 * 9/5) + 32 : 26;
+  const airMin = speedUnit === "ft/s" ? 2.5 * 3.28084 : 2.5;
+  const airMax = speedUnit === "ft/s" ? 4.0 * 3.28084 : 4.0;
 
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-20">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div className="animate-fade-in">
@@ -200,9 +211,9 @@ export default function LiveMonitor() {
             icon={<Thermometer className="h-5 w-5 text-critical" />}
             label="Temperature"
             value={temp}
-            unit="°C"
-            status={getStatus(temp, 22, 26, 18, 30)}
-            optimal="22-26°C"
+            unit={temperatureUnit}
+            status={getStatus(temp, tempMin, tempMax, temperatureUnit === "°F" ? (18 * 9/5) + 32 : 18, temperatureUnit === "°F" ? (30 * 9/5) + 32 : 30)}
+            optimal={`${tempMin.toFixed(0)}-${tempMax.toFixed(0)}${temperatureUnit}`}
           />
           <KPIDisplay
             icon={<Droplets className="h-5 w-5 text-info" />}
@@ -224,22 +235,22 @@ export default function LiveMonitor() {
             icon={<Activity className="h-5 w-5 text-accent" />}
             label="Airflow"
             value={air}
-            unit="m/s"
-            status={getStatus(air, 2.5, 4.0, 1.5, 5.0)}
-            optimal="2.5-4.0"
+            unit={speedUnit}
+            status={getStatus(air, airMin, airMax, speedUnit === "ft/s" ? 1.5 * 3.28084 : 1.5, speedUnit === "ft/s" ? 5.0 * 3.28084 : 5.0)}
+            optimal={`${airMin.toFixed(1)}-${airMax.toFixed(1)}`}
           />
         </div>
 
         {/* Charts Grid */}
         <div className="grid md:grid-cols-2 gap-6">
           <LiveChart
-            data={sensorData.temperature}
+            data={sensorData.temperature.map(d => ({ ...d, value: temperatureUnit === "°F" ? (d.value * 9/5) + 32 : d.value }))}
             color="hsl(0, 72%, 51%)"
-            unit="°C"
-            optimalMin={22}
-            optimalMax={26}
-            title="Temperature (°C)"
-            yDomain={[15, 35]}
+            unit={temperatureUnit}
+            optimalMin={tempMin}
+            optimalMax={tempMax}
+            title={`Temperature (${temperatureUnit})`}
+            yDomain={temperatureUnit === "°F" ? [(15 * 9/5) + 32, (35 * 9/5) + 32] : [15, 35]}
           />
           <LiveChart
             data={sensorData.humidity}
@@ -260,13 +271,13 @@ export default function LiveMonitor() {
             yDomain={[400, 1600]}
           />
           <LiveChart
-            data={sensorData.airflow}
+            data={sensorData.airflow.map(d => ({ ...d, value: speedUnit === "ft/s" ? d.value * 3.28084 : d.value }))}
             color="hsl(142, 43%, 24%)"
-            unit="m/s"
-            optimalMin={2.5}
-            optimalMax={4.0}
-            title="Airflow (m/s)"
-            yDomain={[0, 6]}
+            unit={speedUnit}
+            optimalMin={airMin}
+            optimalMax={airMax}
+            title={`Airflow (${speedUnit})`}
+            yDomain={speedUnit === "ft/s" ? [0, 6 * 3.28084] : [0, 6]}
           />
         </div>
 

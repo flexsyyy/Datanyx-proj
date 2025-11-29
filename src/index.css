@@ -1,0 +1,341 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Base colors - Warm off-white background like reference */
+    --background: 60 20% 97%;
+    --foreground: 0 0% 15%;
+
+    /* Brand colors - Forest/Olive green like reference images */
+    --primary: 142 43% 24%;       /* #2d5a3d - Forest Green */
+    --primary-dark: 142 45% 18%;  /* #1f422c */
+    --primary-light: 142 38% 35%; /* #3d7a52 */
+    --primary-foreground: 0 0% 98%;
+
+    --accent: 75 45% 45%;         /* #7a9a3a - Olive/Sage Green */
+    --accent-dark: 75 50% 35%;    /* #5c7a26 */
+    --accent-light: 75 40% 55%;   /* #9ab355 */
+    --accent-foreground: 0 0% 98%;
+
+    /* Neutrals - Warmer tones */
+    --neutral-900: 30 10% 10%;    /* #1c1a18 */
+    --neutral-800: 30 8% 20%;     /* #36322f */
+    --neutral-600: 30 5% 42%;     /* #6e6a66 */
+    --neutral-400: 30 5% 75%;     /* #c2bfbc */
+    --neutral-200: 40 15% 95%;    /* #f7f5f2 */
+    --neutral-100: 0 0% 100%;     /* #ffffff */
+
+    /* Semantic colors */
+    --success: 142 61% 36%;       /* #27864a */
+    --success-foreground: 0 0% 98%;
+
+    --warning: 35 92% 50%;        /* #f59e0b - Amber */
+    --warning-foreground: 0 0% 10%;
+
+    --critical: 0 72% 51%;        /* #dc2626 */
+    --critical-foreground: 0 0% 98%;
+
+    --info: 199 89% 48%;          /* #0ea5e9 */
+    --info-foreground: 0 0% 98%;
+
+    /* Component colors */
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 15%;
+    --card-elevated: 40 20% 98%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 15%;
+
+    --secondary: 40 15% 95%;
+    --secondary-foreground: 0 0% 15%;
+
+    --muted: 40 15% 94%;
+    --muted-foreground: 30 5% 45%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 40 10% 88%;
+    --input: 40 10% 88%;
+    --ring: 142 43% 24%;
+
+    --radius: 0.75rem;
+
+    /* Gradients - Green focused */
+    --gradient-primary: linear-gradient(135deg, hsl(142 43% 24%), hsl(142 38% 35%));
+    --gradient-accent: linear-gradient(135deg, hsl(75 45% 45%), hsl(75 40% 55%));
+    --gradient-hero: linear-gradient(135deg, hsl(142 43% 24%) 0%, hsl(75 45% 45%) 100%);
+
+    /* Shadows - Subtle and warm */
+    --shadow-sm: 0 1px 2px 0 hsl(30 10% 0% / 0.04);
+    --shadow-md: 0 4px 6px -1px hsl(30 10% 0% / 0.08);
+    --shadow-lg: 0 10px 15px -3px hsl(30 10% 0% / 0.08);
+    --shadow-glow: 0 0 30px hsl(142 43% 24% / 0.15);
+
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark {
+    --background: 150 10% 8%;
+    --foreground: 0 0% 95%;
+
+    --card: 150 8% 11%;
+    --card-foreground: 0 0% 95%;
+    --card-elevated: 150 6% 14%;
+
+    --popover: 150 8% 11%;
+    --popover-foreground: 0 0% 95%;
+
+    --primary: 142 38% 35%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 150 6% 18%;
+    --secondary-foreground: 0 0% 95%;
+
+    --muted: 150 6% 18%;
+    --muted-foreground: 0 0% 65%;
+
+    --accent: 75 40% 50%;
+    --accent-foreground: 0 0% 10%;
+
+    --border: 150 6% 22%;
+    --input: 150 6% 22%;
+    --ring: 142 38% 35%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold;
+  }
+}
+
+@layer components {
+  /* KPI Card animations */
+  .kpi-pulse {
+    @apply animate-pulse;
+  }
+
+  .kpi-warning {
+    @apply ring-2 ring-warning/50;
+  }
+
+  .kpi-critical {
+    @apply ring-2 ring-critical/50;
+  }
+
+  /* Trend animations */
+  @keyframes trend-up {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-2px); }
+  }
+
+  @keyframes trend-down {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(2px); }
+  }
+
+  .trend-up {
+    animation: trend-up 1s ease-in-out infinite;
+  }
+
+  .trend-down {
+    animation: trend-down 1s ease-in-out infinite;
+  }
+
+  /* Chart animations */
+  @keyframes chart-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .chart-animate {
+    animation: chart-fade-in 0.6s ease-out;
+  }
+
+  /* Alert slide in */
+  @keyframes alert-slide {
+    from {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  .alert-slide {
+    animation: alert-slide 0.4s ease-out;
+  }
+
+  /* Gauge sweep */
+  @keyframes gauge-sweep {
+    from {
+      transform: rotate(-90deg);
+    }
+    to {
+      transform: rotate(0deg);
+    }
+  }
+
+  .gauge-needle {
+    animation: gauge-sweep 1s ease-out;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Fade animations */
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes slide-in-right {
+    from {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes count-up {
+    from { opacity: 0.5; }
+    to { opacity: 1; }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  @keyframes pulse-subtle {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out;
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.4s ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scale-in 0.3s ease-out;
+  }
+
+  .animate-slide-in-right {
+    animation: slide-in-right 0.4s ease-out;
+  }
+
+  .animate-count-up {
+    animation: count-up 0.5s ease-out;
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 25%,
+      hsl(var(--muted-foreground) / 0.1) 50%,
+      hsl(var(--muted)) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  .animate-pulse-subtle {
+    animation: pulse-subtle 2s ease-in-out infinite;
+  }
+
+  /* Stagger animation delays */
+  .stagger-1 { animation-delay: 0.1s; }
+  .stagger-2 { animation-delay: 0.2s; }
+  .stagger-3 { animation-delay: 0.3s; }
+  .stagger-4 { animation-delay: 0.4s; }
+  .stagger-5 { animation-delay: 0.5s; }
+
+  /* Interactive hover effects */
+  .hover-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px -5px hsl(var(--primary) / 0.1);
+  }
+
+  /* Card accent borders */
+  .card-accent-left {
+    border-left: 3px solid hsl(var(--primary));
+  }
+
+  .card-accent-top {
+    border-top: 3px solid hsl(var(--accent));
+  }
+
+  /* Gradient backgrounds */
+  .bg-gradient-subtle {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--background)) 0%,
+      hsl(var(--muted) / 0.5) 100%
+    );
+  }
+
+  /* Backdrop blur for overlays */
+  .backdrop-blur-subtle {
+    backdrop-filter: blur(8px);
+  }
+}

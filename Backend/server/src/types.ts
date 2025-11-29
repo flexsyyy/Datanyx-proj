@@ -25,10 +25,28 @@ export interface ChatbotRequest {
   userMessage: string;
 }
 
+// ML Yield Prediction response
+export interface MLPrediction {
+  category: 'HIGH' | 'GOOD' | 'MEDIUM' | 'LOW';
+  color: string;
+  description: string;
+  harvest_cycle: number;
+  input?: {
+    species: string;
+    temperature_c: number;
+    humidity_pct: number;
+    co2_ppm: number;
+    substrate_moisture: number;
+    light_lux: number;
+    water_quality_index: number;
+  };
+}
+
 // Response from the chatbot endpoint
 export interface ChatbotResponse {
   reply: string;
   newHistory: ChatMessage[];
+  mlPrediction?: MLPrediction;  // ML model prediction
   error?: string;
 }
 

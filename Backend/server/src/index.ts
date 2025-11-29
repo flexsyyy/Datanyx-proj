@@ -50,10 +50,14 @@ app.post('/api/chatbot/fungi', async (req, res) => {
     });
     
     console.log(`[${new Date().toISOString()}] Fungi chatbot response: ${result.reply.substring(0, 100)}...`);
+    if (result.mlPrediction) {
+      console.log(`[${new Date().toISOString()}] ML Prediction: ${result.mlPrediction.category} (Cycle ${result.mlPrediction.harvest_cycle})`);
+    }
     
     const response: ChatbotResponse = {
       reply: result.reply,
       newHistory: result.newHistory,
+      mlPrediction: result.mlPrediction || undefined,
     };
     
     res.json(response);

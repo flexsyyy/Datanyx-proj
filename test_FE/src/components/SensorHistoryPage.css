@@ -1,0 +1,168 @@
+.history-container {
+  min-height: 100vh;
+  background-color: #0f172a;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 20px;
+  color: #e2e8f0;
+  font-family: -apple-system,BlinkMacSystemFont,'Segoe UI','Roboto','Oxygen','Ubuntu','Cantarell','Fira Sans','Droid Sans','Helvetica Neue',sans-serif;
+}
+
+.history-card {
+  background-color: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%;
+  max-width: 1100px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #334155;
+  padding-bottom: 12px;
+}
+
+.history-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.history-subtitle {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.region-chip {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+}
+
+.history-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  background: #0b5ed7;
+  border: 1px solid #0a58ca;
+  color: #e2e8f0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.btn:hover { background: #0a58ca; }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-danger { background: #b91c1c; border-color: #991b1b; }
+.btn-danger:hover { background: #991b1b; }
+
+.error-banner {
+  margin: 12px 0;
+  padding: 10px;
+  background-color: #7f1d1d;
+  border: 1px solid #991b1b;
+  border-radius: 6px;
+  color: #fca5a5;
+  font-size: 13px;
+}
+
+.no-history {
+  text-align: center;
+  color: #94a3b8;
+  padding: 40px 0;
+}
+
+.table-wrap {
+  overflow: auto;
+  border: 1px solid #334155;
+  border-radius: 8px;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+}
+
+.history-table th,
+.history-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #334155;
+  font-size: 13px;
+  vertical-align: top;
+}
+
+.history-table thead th {
+  position: sticky;
+  top: 0;
+  background: #0f172a;
+  z-index: 1;
+  text-align: left;
+  color: #cbd5e1;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  margin-right: 6px;
+}
+.status-dot.good { background: #4ade80; }
+.status-dot.warning { background: #fbbf24; }
+.status-dot.bad { background: #f87171; }
+.status-text { text-transform: capitalize; }
+
+.aws-yes { color: #4ade80; font-weight: 600; }
+.aws-no { color: #f87171; font-weight: 600; }
+
+.details-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+.details-title {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+.code-block {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 10px;
+  max-height: 260px;
+  overflow: auto;
+  color: #e5e7eb;
+}
+
+@media (max-width: 800px) {
+  .details-panel {
+    grid-template-columns: 1fr;
+  }
+}
+
+

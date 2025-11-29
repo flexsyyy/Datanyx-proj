@@ -1,0 +1,14 @@
+{
+  "pythonVersion": "3.11",
+  "pythonPlatform": "Windows",
+  "venvPath": "",
+  "venv": "",
+  "extraPaths": [
+    "C:\\Python311\\Lib\\site-packages",
+    "C:\\Users\\MUSTAFA IDRIS HASAN\\AppData\\Roaming\\Python\\Python311\\site-packages"
+  ],
+  "reportMissingImports": "warning"
+}
+
+
+

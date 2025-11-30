@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { SessionStore } from '@/services/storageService';
+import { toast } from '@/hooks/use-toast';
 
 interface PredictionData {
   yieldRange: { min: number; max: number };
@@ -63,9 +64,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (data.status === 'high-risk' || data.category === 'LOW') {
       addAlert({
         severity: 'critical',
-        title: 'Low Yield Prediction',
+        title: '🔴 Low Yield Prediction - Critical',
         message: `${data.inputs.species}: Predicted harvest cycle ${data.harvestCycle} (${data.yieldRange.min}-${data.yieldRange.max}kg). Immediate adjustments recommended.`,
         time: 'Just now',
+      });
+      
+      // Show red toast notification immediately
+      toast({
+        title: '🔴 Critical: Low Yield Predicted',
+        description: `${data.inputs.species} will produce only ${data.yieldRange.min}-${data.yieldRange.max}kg (Cycle ${data.harvestCycle}). Review conditions immediately!`,
+        variant: 'destructive',
       });
     } else if (data.status === 'suboptimal' || data.category === 'MEDIUM') {
       addAlert({

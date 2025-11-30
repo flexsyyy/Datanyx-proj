@@ -1,0 +1,8 @@
+species,temperature,humidity,co2,light,substrate_moisture,water_quality
+Oyster,18,70,1200,100,50,60
+Shiitake,17,68,1300,90,48,55
+Lions Mane,19,72,1250,110,52,62
+Button,24,85,900,500,65,80
+Reishi,25,83,910,490,66,84
+Oyster,16,65,1400,80,45,58
+

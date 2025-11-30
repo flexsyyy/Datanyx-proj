@@ -1,0 +1,48 @@
+[
+  {
+    "species": "Oyster",
+    "temperature": 24,
+    "humidity": 85,
+    "co2": 900,
+    "light": 500,
+    "substrate_moisture": 65,
+    "water_quality": 80
+  },
+  {
+    "species": "Shiitake",
+    "temperature": 22,
+    "humidity": 82,
+    "co2": 850,
+    "light": 450,
+    "substrate_moisture": 68,
+    "water_quality": 85
+  },
+  {
+    "species": "Lions Mane",
+    "temperature": 23,
+    "humidity": 88,
+    "co2": 920,
+    "light": 480,
+    "substrate_moisture": 70,
+    "water_quality": 82
+  },
+  {
+    "species": "Button",
+    "temperature": 21,
+    "humidity": 80,
+    "co2": 880,
+    "light": 520,
+    "substrate_moisture": 62,
+    "water_quality": 78
+  },
+  {
+    "species": "Reishi",
+    "temperature": 25,
+    "humidity": 83,
+    "co2": 910,
+    "light": 490,
+    "substrate_moisture": 66,
+    "water_quality": 84
+  }
+]
+

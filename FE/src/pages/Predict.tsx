@@ -39,12 +39,14 @@ import {
   Loader2,
   FileSpreadsheet,
   Leaf,
+  BarChart3,
 } from "lucide-react";
 import { format, subDays, isWithinInterval, startOfDay, endOfDay, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { DateRange } from "react-day-picker";
 import { useUnits } from "@/contexts/UnitsContext";
 import { useDataContext } from "@/contexts/DataContext";
+import { useToast } from "@/hooks/use-toast";
 
 // Types
 interface MLPredictionResponse {
@@ -117,6 +119,7 @@ const generateInitialHistoricalData = (): HistoricalDataPoint[] => {
 export default function Predict() {
   const { formatTemperature, formatWeight, formatSpeed, temperatureUnit, weightUnit, speedUnit } = useUnits();
   const { updatePrediction } = useDataContext();
+  const { toast } = useToast();
   const [formData, setFormData] = useState<EnvironmentalData>({
     temperature: 24,
     humidity: 85,
@@ -419,9 +422,158 @@ Keep it concise and professional. No lengthy explanations.`,
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // State for batch predictions
+  const [batchPredictions, setBatchPredictions] = useState<PredictionResult[]>([]);
+  const [isBatchProcessing, setIsBatchProcessing] = useState(false);
+
+  const parseCSV = (text: string): any[] => {
+    const lines = text.trim().split('\n');
+    if (lines.length < 2) return [];
+    
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    const rows = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',');
+      const row: any = {};
+      headers.forEach((header, index) => {
+        row[header] = values[index]?.trim();
+      });
+      rows.push(row);
+    }
+    
+    return rows;
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setUploadedFile(file);
+    if (!file) return;
+    
+    setUploadedFile(file);
+    setIsBatchProcessing(true);
+    setBatchPredictions([]);
+    
+    try {
+      const text = await file.text();
+      let rows: any[] = [];
+      
+      // Parse based on file type
+      if (file.name.endsWith('.json')) {
+        rows = JSON.parse(text);
+        if (!Array.isArray(rows)) rows = [rows];
+      } else if (file.name.endsWith('.csv')) {
+        rows = parseCSV(text);
+      } else {
+        toast({
+          title: "Unsupported file format",
+          description: "Please upload a CSV or JSON file.",
+          variant: "destructive",
+        });
+        setIsBatchProcessing(false);
+        return;
+      }
+      
+      // Process each row
+      const predictions: PredictionResult[] = [];
+      
+      for (const row of rows.slice(0, 50)) { // Limit to 50 rows
+        try {
+          const mlPayload = {
+            species: row.species || row.mushroom_type || 'Oyster',
+            temperature_c: parseFloat(row.temperature || row.temp_c || row.temperature_c) || 24,
+            humidity_pct: parseFloat(row.humidity || row.humidity_pct) || 85,
+            co2_ppm: parseFloat(row.co2 || row.co2_ppm) || 900,
+            light_lux: parseFloat(row.light || row.light_lux) || 500,
+            substrate_moisture: parseFloat(row.substrate_moisture || row.substrate_moisture_pct) || 65,
+            water_quality_index: parseFloat(row.water_quality || row.water_quality_index) || 80,
+          };
+          
+          // Call ML API
+          const mlResponse = await fetch(ML_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(mlPayload),
+          });
+          
+          if (!mlResponse.ok) continue;
+          
+          const mlPrediction: MLPredictionResponse = await mlResponse.json();
+          const harvestCycle = mlPrediction.harvest_cycle;
+          
+          // Calculate yield range
+          let yieldMin = 0, yieldMax = 0, status: PredictionResult["status"] = "ideal";
+          let contaminationRisk = 5;
+          
+          if (harvestCycle === 6) {
+            yieldMin = 55; yieldMax = 65; status = "ideal"; contaminationRisk = 5;
+          } else if (harvestCycle === 5) {
+            yieldMin = 45; yieldMax = 55; status = "ideal"; contaminationRisk = 10;
+          } else if (harvestCycle === 4) {
+            yieldMin = 35; yieldMax = 45; status = "suboptimal"; contaminationRisk = 25;
+          } else {
+            yieldMin = 20; yieldMax = 30; status = "high-risk"; contaminationRisk = 65;
+          }
+          
+          const yieldEstimate = (yieldMin + yieldMax) / 2;
+          
+          const predictionResult = {
+            yieldRange: { min: yieldMin, max: yieldMax },
+            yieldEstimate,
+            status,
+            contaminationRisk,
+            confidence: harvestCycle === 6 ? 95 : harvestCycle === 5 ? 88 : harvestCycle === 4 ? 78 : 68,
+            mlPrediction,
+          };
+          
+          predictions.push(predictionResult);
+          
+          // Trigger alerts for low yield predictions in batch
+          if (status === 'high-risk' || mlPrediction.category === 'LOW') {
+            updatePrediction({
+              yieldRange: { min: yieldMin, max: yieldMax },
+              harvestCycle: mlPrediction.harvest_cycle,
+              category: mlPrediction.category,
+              status,
+              confidence: predictionResult.confidence,
+              contaminationRisk,
+              timestamp: new Date().toISOString(),
+              inputs: {
+                temperature: mlPayload.temperature_c,
+                humidity: mlPayload.humidity_pct,
+                co2: mlPayload.co2_ppm,
+                species: mlPayload.species,
+              },
+            });
+          }
+          
+        } catch (error) {
+          console.error('Error processing row:', error);
+        }
+      }
+      
+      setBatchPredictions(predictions);
+      
+      // Summary toast with low yield warning if any
+      const lowYieldCount = predictions.filter(p => p.status === 'high-risk').length;
+      const mediumYieldCount = predictions.filter(p => p.status === 'suboptimal').length;
+      
+      toast({
+        title: lowYieldCount > 0 ? "⚠️ Batch processing complete - Issues found!" : "✅ Batch processing complete",
+        description: lowYieldCount > 0 
+          ? `Processed ${predictions.length} predictions. ${lowYieldCount} LOW YIELD warnings found!`
+          : `Processed ${predictions.length} predictions. ${predictions.filter(p => p.status === 'ideal').length} with high/good yield.`,
+        variant: lowYieldCount > 0 ? 'destructive' : 'default',
+      });
+      
+    } catch (error) {
+      toast({
+        title: "File processing error",
+        description: error instanceof Error ? error.message : "Failed to process file",
+        variant: "destructive",
+      });
+    } finally {
+      setIsBatchProcessing(false);
+    }
   };
 
   const getStatusConfig = (status: PredictionResult["status"]) => {
@@ -616,7 +768,7 @@ Keep it concise and professional. No lengthy explanations.`,
               <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors">
                 <input
                   type="file"
-                  accept=".csv,.xlsx,.xls"
+                  accept=".csv,.json"
                   onChange={handleFileUpload}
                   className="hidden"
                   id="file-upload"
@@ -624,17 +776,123 @@ Keep it concise and professional. No lengthy explanations.`,
                 <label htmlFor="file-upload" className="cursor-pointer">
                   <FileSpreadsheet className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
                   <p className="text-sm text-muted-foreground">
-                    {uploadedFile ? uploadedFile.name : "Drop CSV/Excel file or click to browse"}
+                    {uploadedFile ? uploadedFile.name : "Drop CSV/JSON file or click to browse"}
                   </p>
                 </label>
               </div>
               {uploadedFile && (
-                <Badge variant="secondary" className="mt-3 animate-fade-in">
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  File ready for analysis
-                </Badge>
+                <div className="mt-3 space-y-2">
+                  <Badge variant="secondary" className="animate-fade-in">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    {isBatchProcessing ? 'Processing...' : `Processed ${batchPredictions.length} predictions`}
+                  </Badge>
+                  {isBatchProcessing && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Analyzing batch data...
+                    </div>
+                  )}
+                </div>
               )}
+              
+              {/* CSV Format Guide */}
+              <div className="mt-4 p-4 bg-primary/5 border border-primary/20 rounded-lg space-y-3">
+                <p className="text-sm font-semibold text-foreground mb-2">📄 Accepted File Formats</p>
+                
+                {/* CSV Format */}
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground font-medium">CSV Format (with header row):</p>
+                  <code className="text-xs text-foreground bg-muted/50 px-2 py-1 rounded block overflow-x-auto">
+                    species,temperature,humidity,co2,light,substrate_moisture,water_quality<br/>
+                    Oyster,24,85,900,500,65,80<br/>
+                    Shiitake,22,82,850,450,68,85
+                  </code>
+                </div>
+                
+                {/* JSON Format */}
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground font-medium">JSON Format (array of objects):</p>
+                  <code className="text-xs text-foreground bg-muted/50 px-2 py-1 rounded block overflow-x-auto">
+                    [{`{"species":"Oyster","temperature":24,"humidity":85,...}`}]
+                  </code>
+                </div>
+                
+                <p className="text-xs text-muted-foreground italic">
+                  💡 Tip: File can contain up to 50 readings for batch analysis
+                </p>
+              </div>
             </Card>
+
+            {/* Batch Predictions Results */}
+            {batchPredictions.length > 0 && (
+              <Card className="p-6 animate-scale-in hover:shadow-lg transition-all duration-300">
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                  Batch Prediction Results ({batchPredictions.length})
+                </h2>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {batchPredictions.map((pred, index) => (
+                    <div key={index} className="p-4 border rounded-lg hover:shadow-md transition-all" style={{ borderColor: pred.mlPrediction?.color }}>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-muted-foreground">#{index + 1}</span>
+                          <Badge className={getStatusConfig(pred.status).color}>
+                            {pred.mlPrediction?.category}
+                          </Badge>
+                          <span className="text-sm text-foreground font-medium">
+                            {pred.mlPrediction?.input.species}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-primary">
+                            {pred.yieldRange.min}-{pred.yieldRange.max} kg
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Cycle {pred.mlPrediction?.harvest_cycle}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 mt-2 text-xs">
+                        <div>
+                          <span className="text-muted-foreground">Temp:</span>{" "}
+                          <span className="text-foreground font-medium">
+                            {pred.mlPrediction?.input.temperature_c}°C
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Humidity:</span>{" "}
+                          <span className="text-foreground font-medium">
+                            {pred.mlPrediction?.input.humidity_pct}%
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">CO2:</span>{" "}
+                          <span className="text-foreground font-medium">
+                            {pred.mlPrediction?.input.co2_ppm}ppm
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Avg Yield:</p>
+                      <p className="text-lg font-bold text-primary">
+                        {(batchPredictions.reduce((sum, p) => sum + p.yieldEstimate, 0) / batchPredictions.length).toFixed(1)} kg
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">High Quality:</p>
+                      <p className="text-lg font-bold text-success">
+                        {batchPredictions.filter(p => p.mlPrediction?.category === 'HIGH' || p.mlPrediction?.category === 'GOOD').length} / {batchPredictions.length}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            )}
 
             {prediction && (
               <Card className="p-6 animate-scale-in hover:shadow-lg transition-all duration-300">

@@ -1,0 +1,17 @@
+species,temperature,humidity,co2,light,substrate_moisture,water_quality
+Oyster,24,85,900,500,65,80
+Shiitake,22,82,850,450,68,85
+Lions Mane,23,88,920,480,70,82
+Button,21,80,880,520,62,78
+Reishi,25,83,910,490,66,84
+Oyster,26,87,950,510,68,81
+Shiitake,23,84,870,460,65,86
+Lions Mane,24,86,900,500,69,83
+Button,22,81,890,530,63,79
+Reishi,24,85,920,485,67,85
+Oyster,25,88,940,495,70,82
+Shiitake,21,83,860,455,66,87
+Lions Mane,23,87,910,505,68,84
+Button,24,82,900,525,64,80
+Reishi,26,84,930,480,65,86
+

@@ -18,6 +18,7 @@ import Reports from "./pages/Reports";
 import Recommendations from "./pages/Recommendations";
 import NotFound from "./pages/NotFound";
 import { Chatbot } from "./components/Chatbot";
+import DarkVeil from "./components/ui/DarkVeil";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,17 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <div className="fixed inset-0 z-[-1] pointer-events-none">
+            <DarkVeil 
+              hueShift={60} 
+              noiseIntensity={0.1} 
+              scanlineIntensity={0.2} 
+              scanlineFrequency={500}
+              speed={0.2}
+              warpAmount={0.5}
+            />
+          </div>
+          <div className="fixed inset-0 z-[-2] bg-background/50 pointer-events-none" />
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Landing />} />

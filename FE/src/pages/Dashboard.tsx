@@ -33,39 +33,37 @@ function HealthIndex({ value, label }: { value: number; label: string }) {
   };
 
   return (
-    <Card className={`p-6 bg-gradient-to-br ${getGradient(value)} border-0`}>
-      <div className="flex items-center gap-4">
-        <div className="relative">
-          <svg className="w-20 h-20 transform -rotate-90">
-            <circle
-              cx="40"
-              cy="40"
-              r="35"
-              stroke="currentColor"
-              strokeWidth="6"
-              fill="none"
-              className="text-muted/20"
-            />
-            <circle
-              cx="40"
-              cy="40"
-              r="35"
-              stroke="currentColor"
-              strokeWidth="6"
-              fill="none"
-              strokeDasharray={`${(value / 100) * 220} 220`}
-              strokeLinecap="round"
-              className={getColor(value)}
-            />
-          </svg>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className={`text-xl font-bold ${getColor(value)}`}>{value}%</span>
-          </div>
+    <Card className={`p-6 bg-gradient-to-br ${getGradient(value)} border-0 h-full flex flex-col items-center justify-center`}>
+      <div className="relative mb-4">
+        <svg className="w-32 h-32 transform -rotate-90">
+          <circle
+            cx="64"
+            cy="64"
+            r="56"
+            stroke="currentColor"
+            strokeWidth="12"
+            fill="none"
+            className="text-muted/20"
+          />
+          <circle
+            cx="64"
+            cy="64"
+            r="56"
+            stroke="currentColor"
+            strokeWidth="12"
+            fill="none"
+            strokeDasharray={`${(value / 100) * 351} 351`}
+            strokeLinecap="round"
+            className={getColor(value)}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className={`text-3xl font-bold ${getColor(value)}`}>{value}%</span>
         </div>
-        <div>
-          <h3 className="text-lg font-semibold text-foreground">{label}</h3>
-          <p className="text-sm text-muted-foreground">Overall system health</p>
-        </div>
+      </div>
+      <div className="text-center">
+        <h3 className="text-xl font-semibold text-foreground mb-1">{label}</h3>
+        <p className="text-sm text-muted-foreground">Overall system health</p>
       </div>
     </Card>
   );
@@ -165,7 +163,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <Navigation />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-20">

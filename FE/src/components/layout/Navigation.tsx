@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SettingsPanel } from "@/components/SettingsPanel";
 import { useDataContext } from "@/contexts/DataContext";
+import { Logo } from "@/components/ui/Logo";
 import {
   LayoutDashboard,
   Home,
@@ -16,7 +17,6 @@ import {
   BarChart3,
   Menu,
   X,
-  Sprout,
   Lightbulb,
   AlertTriangle,
   Thermometer,
@@ -132,9 +132,9 @@ export function Navigation() {
               className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted/50 transition-colors shrink-0"
             >
               <div className="p-1.5 bg-gradient-to-br from-primary to-accent rounded-lg">
-                <Sprout className="h-5 w-5 text-primary-foreground" />
+                <Logo className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="text-lg font-bold text-foreground hidden sm:inline">
+              <span className="text-lg font-bold text-foreground hidden sm:inline font-serif">
                 mush-the-room
               </span>
             </Link>

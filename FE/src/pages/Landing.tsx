@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Link } from "react-router-dom";
+import MagicBento, { BentoCardItem } from "@/components/ui/MagicBento";
+import { Logo } from "@/components/ui/Logo";
 import {
   Thermometer,
   Droplets,
@@ -13,55 +15,55 @@ import {
   Users,
   CheckCircle,
   ArrowRight,
-  Sprout,
 } from "lucide-react";
 
 export default function Landing() {
-  const features = [
+  const bentoFeatures: BentoCardItem[] = [
     {
-      icon: <Activity className="h-6 w-6" />,
+      icon: <Activity className="h-8 w-8" />,
       title: "Real-Time Monitoring",
-      description:
-        "Track temperature, humidity, CO2, airflow, and substrate moisture continuously with live dashboards.",
+      description: "Track temperature, humidity, CO2, airflow, and substrate moisture continuously with live dashboards.",
+      label: "MONITOR",
+      colSpan: 2,
+      rowSpan: 2,
     },
     {
-      icon: <Bell className="h-6 w-6" />,
+      icon: <Bell className="h-8 w-8" />,
       title: "Smart Alerts",
-      description:
-        "Get instant notifications when environmental conditions drift from optimal ranges before contamination occurs.",
+      description: "Get instant notifications when environmental conditions drift from optimal ranges.",
+      label: "ALERT",
+      colSpan: 1,
     },
     {
-      icon: <TrendingUp className="h-6 w-6" />,
+      icon: <TrendingUp className="h-8 w-8" />,
       title: "Predictive Analytics",
-      description:
-        "Leverage historical data and patterns to predict yield outcomes and optimize growing conditions.",
+      description: "Leverage historical data to predict yield outcomes.",
+      label: "PREDICT",
+      colSpan: 1,
     },
     {
-      icon: <Shield className="h-6 w-6" />,
+      icon: <Shield className="h-8 w-8" />,
       title: "Contamination Detection",
-      description:
-        "Early warning system detects subtle environmental changes that could lead to contamination.",
+      description: "Early warning system for contamination risks.",
+      label: "PROTECT",
+      colSpan: 2,
     },
     {
-      icon: <Zap className="h-6 w-6" />,
+      icon: <Zap className="h-8 w-8" />,
       title: "Actionable Insights",
-      description:
-        "Receive step-by-step recommendations and runbooks to correct issues immediately.",
+      description: "Step-by-step recommendations to correct issues.",
+      label: "ACT",
+      colSpan: 1,
     },
     {
-      icon: <Users className="h-6 w-6" />,
+      icon: <Users className="h-8 w-8" />,
       title: "Multi-Shelter Support",
-      description:
-        "Manage multiple growing chambers and track performance across all your operations.",
+      description: "Manage multiple growing chambers.",
+      label: "SCALE",
+      colSpan: 1,
     },
   ];
 
-  const stats = [
-    { value: "95%", label: "Yield Consistency" },
-    { value: "60%", label: "Reduced Contamination" },
-    { value: "24/7", label: "Monitoring" },
-    { value: "500+", label: "Active Growers" },
-  ];
 
   const benefits = [
     "Eliminate guesswork with data-driven decisions",
@@ -73,16 +75,16 @@ export default function Landing() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
               <div className="p-2 bg-gradient-to-br from-primary to-accent rounded-lg">
-                <Sprout className="h-6 w-6 text-primary-foreground" />
+                <Logo className="h-6 w-6 text-primary-foreground" />
               </div>
-              <span className="text-xl font-bold text-foreground">
+              <span className="text-xl font-bold text-foreground font-serif">
                 mush-the-room
               </span>
             </div>
@@ -105,10 +107,6 @@ export default function Landing() {
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-accent/5 to-background" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
           <div className="text-center space-y-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-accent/10 border border-accent/20 rounded-full text-sm font-medium text-accent">
-              <Sprout className="h-4 w-4" />
-              Precision Agriculture for Mushroom Farmers
-            </div>
 
             <h1 className="text-4xl sm:text-6xl font-bold text-foreground max-w-4xl mx-auto leading-tight">
               Transform Mushroom Farming from{" "}
@@ -140,19 +138,6 @@ export default function Landing() {
               </Link>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 pt-16 max-w-4xl mx-auto">
-              {stats.map((stat, index) => (
-                <div key={index} className="text-center">
-                  <div className="text-3xl sm:text-4xl font-bold text-primary mb-2">
-                    {stat.value}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {stat.label}
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </section>
@@ -204,7 +189,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Features Grid */}
+      {/* Features Grid with MagicBento */}
       <section className="py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-16">
@@ -217,28 +202,12 @@ export default function Landing() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <Card
-                key={index}
-                className="p-6 hover:shadow-lg transition-all hover:border-primary/50"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-primary/10 rounded-lg text-primary flex-shrink-0">
-                    {feature.icon}
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-lg mb-2">
-                      {feature.title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {feature.description}
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+          <MagicBento 
+            items={bentoFeatures} 
+            glowColor="122, 154, 58" 
+            enableStars={true}
+            enableSpotlight={true}
+          />
         </div>
       </section>
 
@@ -337,7 +306,7 @@ export default function Landing() {
             <div className="col-span-2">
               <div className="flex items-center gap-2 mb-4">
                 <div className="p-2 bg-gradient-to-br from-primary to-accent rounded-lg">
-                  <Sprout className="h-5 w-5 text-primary-foreground" />
+                  <Logo className="h-5 w-5 text-primary-foreground" />
                 </div>
                 <span className="text-lg font-bold">mush-the-room</span>
               </div>
@@ -388,7 +357,7 @@ export default function Landing() {
             </div>
           </div>
           <div className="border-t border-border mt-8 pt-8 text-center text-sm text-muted-foreground">
-            <p>© 2024 mush-the-room. All rights reserved.</p>
+            <p>© 2025 <span className="font-serif">mush-the-room</span>. All rights reserved.</p>
           </div>
         </div>
       </footer>

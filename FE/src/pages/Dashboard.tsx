@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useUnits } from "@/contexts/UnitsContext";
+import { useDataContext } from "@/contexts/DataContext";
 import {
   Thermometer,
   Droplets,
@@ -73,6 +74,38 @@ function HealthIndex({ value, label }: { value: number; label: string }) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { formatTemperature, formatSpeed, temperatureUnit, speedUnit } = useUnits();
+  const { latestPrediction } = useDataContext();
+
+  // Use prediction data if available, otherwise use defaults
+  const temperature = latestPrediction?.inputs.temperature ?? 24.5;
+  const humidity = latestPrediction?.inputs.humidity ?? 87;
+  const co2 = latestPrediction?.inputs.co2 ?? 1050;
+  const airflow = 3.2; // No airflow in prediction data, use default
+
+  // Calculate status based on values
+  const getTempStatus = (temp: number) => {
+    if (temp < 20 || temp > 28) return "critical";
+    if (temp < 22 || temp > 26) return "warning";
+    return "normal";
+  };
+
+  const getHumidityStatus = (hum: number) => {
+    if (hum < 70 || hum > 95) return "critical";
+    if (hum < 80 || hum > 90) return "warning";
+    return "normal";
+  };
+
+  const getCO2Status = (co2val: number) => {
+    if (co2val > 1200 || co2val < 600) return "critical";
+    if (co2val > 1000 || co2val < 800) return "warning";
+    return "normal";
+  };
+
+  const getAirflowStatus = (air: number) => {
+    if (air < 1.5 || air > 5) return "critical";
+    if (air < 2.5 || air > 4.0) return "warning";
+    return "normal";
+  };
 
   const alerts = [
     {
@@ -150,42 +183,42 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <KPICard
             title="Temperature"
-            value={formatTemperature(24.5)}
+            value={formatTemperature(temperature)}
             unit={temperatureUnit}
-            trend="stable"
-            trendValue={`±${formatTemperature(0.2)}`}
+            trend={latestPrediction ? "up" : "stable"}
+            trendValue={latestPrediction ? "Updated" : `±${formatTemperature(0.2)}`}
             optimal={`${formatTemperature(22)}-${formatTemperature(26)}${temperatureUnit}`}
-            status="normal"
+            status={getTempStatus(temperature)}
             icon={<Thermometer className="h-5 w-5" />}
           />
           <KPICard
             title="Humidity"
-            value={87}
+            value={humidity}
             unit="%"
-            trend="up"
-            trendValue="+2%"
+            trend={latestPrediction ? "up" : "up"}
+            trendValue={latestPrediction ? "Updated" : "+2%"}
             optimal="80-90%"
-            status="normal"
+            status={getHumidityStatus(humidity)}
             icon={<Droplets className="h-5 w-5" />}
           />
           <KPICard
             title="CO2 Level"
-            value={1050}
+            value={co2}
             unit="ppm"
-            trend="up"
-            trendValue="+150 ppm"
+            trend={latestPrediction ? "up" : "up"}
+            trendValue={latestPrediction ? "Updated" : "+150 ppm"}
             optimal="800-1000"
-            status="warning"
+            status={getCO2Status(co2)}
             icon={<Wind className="h-5 w-5" />}
           />
           <KPICard
             title="Airflow"
-            value={formatSpeed(3.2)}
+            value={formatSpeed(airflow)}
             unit={speedUnit}
-            trend="stable"
-            trendValue={`±${formatSpeed(0.1)}`}
+            trend={latestPrediction ? "stable" : "stable"}
+            trendValue={latestPrediction ? "Updated" : `±${formatSpeed(0.1)}`}
             optimal={`${formatSpeed(2.5)}-${formatSpeed(4.0)}`}
-            status="normal"
+            status={getAirflowStatus(airflow)}
             icon={<Activity className="h-5 w-5" />}
           />
         </div>

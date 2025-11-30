@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navigation } from "@/components/layout/Navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,69 +15,43 @@ import {
 import { AlertTriangle, AlertCircle, Info, CheckCircle, Clock, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useDataContext } from "@/contexts/DataContext";
 
 interface Alert {
-  id: number;
+  id: string;
   severity: string;
   title: string;
-  description: string;
-  chamber: string;
+  message: string;
+  description?: string;
+  chamber?: string;
   time: string;
-  action: string;
-  resolved: boolean;
+  action?: string;
+  resolved?: boolean;
+  timestamp: string;
 }
 
-const initialAlerts: Alert[] = [
-  {
-    id: 1,
-    severity: "critical",
-    title: "CO2 levels dangerously high",
-    description: "High CO2 can inhibit mushroom pinning. Immediate ventilation is recommended.",
-    chamber: "Chamber B2",
-    time: "5m ago",
-    action: "Increase ventilation immediately",
-    resolved: false,
-  },
-  {
-    id: 2,
-    severity: "warning",
-    title: "Humidity dropping below optimal",
-    description: "Low humidity may cause primordia to abort. Monitor and adjust misting frequency.",
-    chamber: "Chamber A1",
-    time: "1h ago",
-    action: "Check humidifier settings",
-    resolved: false,
-  },
-  {
-    id: 3,
-    severity: "info",
-    title: "Substrate colonization at 95%",
-    description: "The current batch is almost ready for the next growth stage. Prepare for fruiting conditions.",
-    chamber: "Chamber C3",
-    time: "4h ago",
-    action: "Prepare fruiting conditions",
-    resolved: true,
-  },
-  {
-    id: 4,
-    severity: "warning",
-    title: "Temperature trending high",
-    description: "Temperature reached a high level, which may stress developing primordia.",
-    chamber: "Chamber B2",
-    time: "2h ago",
-    action: "Activate cooling system",
-    resolved: true,
-  },
-];
-
 export default function Alerts() {
-  const [alerts, setAlerts] = useState<Alert[]>(initialAlerts);
+  const { alerts: contextAlerts } = useDataContext();
+  const [localAlerts, setLocalAlerts] = useState<Alert[]>([]);
+  
+  // Merge context alerts with any resolved state tracking
+  useEffect(() => {
+    // Map context alerts to local format with resolved tracking
+    const mappedAlerts = contextAlerts.map(alert => ({
+      ...alert,
+      description: alert.message,
+      chamber: "Prediction System",
+      action: alert.severity === "critical" ? "Adjust conditions immediately" : "Review and optimize",
+      resolved: false,
+    }));
+    setLocalAlerts(mappedAlerts);
+  }, [contextAlerts]);
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   const [isFixDialogOpen, setIsFixDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const handleMarkAllAsRead = () => {
-    setAlerts(alerts.map((alert) => ({ ...alert, resolved: true })));
+    setLocalAlerts(localAlerts.map((alert) => ({ ...alert, resolved: true })));
     toast({
       title: "All alerts marked as read",
       description: "All active alerts have been marked as resolved.",
@@ -89,24 +63,156 @@ export default function Alerts() {
     setIsFixDialogOpen(true);
   };
 
+  // Get actionable recommendations based on alert type
+  const getRecommendations = (alert: Alert): { action: string; steps: string[] } => {
+    const title = alert.title.toLowerCase();
+    const severity = alert.severity;
+    
+    // Temperature alerts
+    if (title.includes('temperature')) {
+      if (title.includes('critical') && title.includes('high')) {
+        return {
+          action: 'Reduce temperature immediately',
+          steps: [
+            'Activate cooling system or increase ventilation',
+            'Check for equipment malfunction or heat sources',
+            'Monitor temperature every 5 minutes until stabilized',
+            'Consider misting to help cool the environment'
+          ]
+        };
+      } else if (title.includes('critical') && title.includes('low')) {
+        return {
+          action: 'Increase temperature immediately',
+          steps: [
+            'Activate heating system or reduce ventilation',
+            'Check for drafts or cold air leaks',
+            'Monitor temperature every 5 minutes until stabilized',
+            'Ensure heating equipment is functioning properly'
+          ]
+        };
+      } else if (title.includes('warning') && title.includes('high')) {
+        return {
+          action: 'Take preventive action before it becomes critical',
+          steps: [
+            'Increase air circulation gradually',
+            'Check cooling system is operating efficiently',
+            'Monitor temperature trend over next 30 minutes',
+            'Prepare to activate emergency cooling if needed'
+          ]
+        };
+      } else {
+        return {
+          action: 'Take preventive action before it becomes critical',
+          steps: [
+            'Adjust heating system settings',
+            'Monitor temperature trend over next 30 minutes',
+            'Check for environmental changes affecting temperature',
+            'Prepare heating backup if temperature continues to drop'
+          ]
+        };
+      }
+    }
+    
+    // Humidity alerts
+    if (title.includes('humidity')) {
+      if (title.includes('critical') && title.includes('high')) {
+        return {
+          action: 'Reduce humidity immediately',
+          steps: [
+            'Increase ventilation to allow moisture to escape',
+            'Stop misting cycles temporarily',
+            'Check for water leaks or excess moisture sources',
+            'Consider using dehumidifier if available'
+          ]
+        };
+      } else if (title.includes('critical') && title.includes('low')) {
+        return {
+          action: 'Increase humidity immediately',
+          steps: [
+            'Activate misting system',
+            'Reduce ventilation temporarily',
+            'Check humidifier is functioning properly',
+            'Monitor substrate moisture levels'
+          ]
+        };
+      } else if (title.includes('warning')) {
+        return {
+          action: 'Take preventive action before critical levels',
+          steps: [
+            title.includes('high') ? 'Slightly increase air exchange' : 'Slightly increase misting frequency',
+            'Monitor humidity trend over next 20 minutes',
+            'Check all humidity control equipment',
+            'Prepare for adjustments if trend continues'
+          ]
+        };
+      }
+    }
+    
+    // CO2 alerts
+    if (title.includes('co2')) {
+      if (title.includes('critical') && title.includes('high')) {
+        return {
+          action: 'Reduce CO2 immediately - Risk of growth inhibition',
+          steps: [
+            'Increase fresh air exchange significantly',
+            'Open vents or activate exhaust fans',
+            'Check ventilation system is not blocked',
+            'Monitor CO2 every 10 minutes until below 1000 ppm'
+          ]
+        };
+      } else if (title.includes('warning') && title.includes('high')) {
+        return {
+          action: 'Act now to prevent critical CO2 buildup',
+          steps: [
+            'Increase ventilation rate by 25-50%',
+            'Check air circulation fans are operating',
+            'Monitor CO2 trend over next 15 minutes',
+            'Prepare to increase fresh air if levels continue rising'
+          ]
+        };
+      } else if (title.includes('low')) {
+        return {
+          action: severity === 'critical' ? 'Increase CO2 immediately' : 'Take preventive action',
+          steps: [
+            'Reduce fresh air exchange slightly',
+            'Check for excessive ventilation',
+            'Monitor fruiting body development',
+            'Adjust CO2 injection if system is available'
+          ]
+        };
+      }
+    }
+    
+    // Default recommendations
+    return {
+      action: severity === 'critical' ? 'Immediate action required' : 'Review and optimize conditions',
+      steps: [
+        'Check all environmental control systems',
+        'Monitor parameter trends closely',
+        'Review optimal ranges for your mushroom species',
+        'Adjust systems gradually to avoid shocking the culture'
+      ]
+    };
+  };
+
   const confirmApplyFix = () => {
     if (selectedAlert) {
-      setAlerts(
-        alerts.map((a) =>
+      setLocalAlerts(
+        localAlerts.map((a) =>
           a.id === selectedAlert.id ? { ...a, resolved: true } : a
         )
       );
       toast({
         title: "Fix applied successfully",
-        description: `${selectedAlert.action} - Alert has been resolved.`,
+        description: "Alert has been acknowledged and marked as resolved.",
       });
     }
     setIsFixDialogOpen(false);
     setSelectedAlert(null);
   };
 
-  const activeAlerts = alerts.filter((a) => !a.resolved);
-  const resolvedAlerts = alerts.filter((a) => a.resolved);
+  const activeAlerts = localAlerts.filter((a) => !a.resolved);
+  const resolvedAlerts = localAlerts.filter((a) => a.resolved);
 
   const getAlertIcon = (severity: string) => {
     const iconClasses = "h-5 w-5";
@@ -288,7 +394,7 @@ export default function Alerts() {
           </TabsContent>
 
           <TabsContent value="all" className="space-y-4">
-            {alerts.map((alert) => (
+            {localAlerts.map((alert) => (
               <Card
                 key={alert.id}
                 className={cn(
@@ -321,7 +427,7 @@ export default function Alerts() {
           </TabsContent>
 
           <TabsContent value="resolved" className="space-y-4">
-            {alerts
+            {localAlerts
               .filter((alert) => alert.resolved)
               .map((alert) => (
                 <Card
@@ -352,30 +458,70 @@ export default function Alerts() {
 
         {/* Apply Fix Confirmation Dialog */}
         <Dialog open={isFixDialogOpen} onOpenChange={setIsFixDialogOpen}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-[550px]">
             <DialogHeader>
-              <DialogTitle>Apply Fix</DialogTitle>
+              <DialogTitle>
+                {selectedAlert?.severity === 'critical' ? '🔴 Critical Alert - Immediate Action Required' : '⚠️ Warning - Take Action Before Danger'}
+              </DialogTitle>
               <DialogDescription>
-                Are you sure you want to apply the following fix?
+                {selectedAlert?.severity === 'critical' 
+                  ? 'Conditions are outside safe range. Follow these steps immediately to prevent damage to your culture.'
+                  : 'Conditions are approaching critical levels. Act now to prevent escalation and protect your mushroom yield.'}
               </DialogDescription>
             </DialogHeader>
-            {selectedAlert && (
-              <div className="py-4">
-                <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-                  <p className="font-medium text-foreground">{selectedAlert.title}</p>
-                  <p className="text-sm text-muted-foreground">{selectedAlert.chamber}</p>
-                  <div className="flex items-center gap-2 text-sm text-primary mt-2">
-                    <Wrench className="h-4 w-4" />
-                    <span className="font-medium">{selectedAlert.action}</span>
+            {selectedAlert && (() => {
+              const recommendations = getRecommendations(selectedAlert);
+              return (
+                <div className="py-4 space-y-4">
+                  {/* Alert Info */}
+                  <div className={cn(
+                    "p-4 rounded-lg border-l-4",
+                    selectedAlert.severity === 'critical' ? 'bg-critical/5 border-critical' : 'bg-warning/5 border-warning'
+                  )}>
+                    <p className="font-semibold text-foreground mb-1">{selectedAlert.title}</p>
+                    <p className="text-sm text-muted-foreground">{selectedAlert.message}</p>
                   </div>
+
+                  {/* Recommended Action */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Wrench className="h-5 w-5 text-primary" />
+                      <h4 className="font-semibold text-foreground">Recommended Action:</h4>
+                    </div>
+                    <p className="text-sm font-medium text-primary pl-7">{recommendations.action}</p>
+                  </div>
+
+                  {/* Step-by-step guide */}
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-foreground">Steps to Resolve:</h4>
+                    <ol className="space-y-2 pl-5">
+                      {recommendations.steps.map((step, index) => (
+                        <li key={index} className="text-sm text-muted-foreground list-decimal">
+                          {step}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+
+                  {/* Warning message for warnings */}
+                  {selectedAlert.severity === 'warning' && (
+                    <div className="p-3 bg-warning/10 border border-warning/30 rounded-lg">
+                      <p className="text-sm text-orange-900 dark:text-orange-100 font-semibold">
+                        ⏰ Act now to prevent this from becoming a critical issue!
+                      </p>
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
+              );
+            })()}
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsFixDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={confirmApplyFix}>
+              <Button 
+                onClick={confirmApplyFix}
+                className={selectedAlert?.severity === 'critical' ? 'bg-critical hover:bg-critical/90' : ''}
+              >
                 Confirm & Apply
               </Button>
             </DialogFooter>

@@ -3,6 +3,7 @@
 This document provides a comprehensive, high-signal overview of the Datanyx project: architecture, services, key files, APIs, and core functions. It covers both the current AWS_test frontend + Chatbot + ML services, as well as the additional frontend introduced via the `src/` directory after merging branches.
 
 ### High-Level System
+- Note: The frontend introduced from the master branch has been moved under `FE/` (e.g., `FE/src`, `FE/index.html`, `FE/vite.config.ts`, etc.) to keep the repository root clean.
 - **Frontend (AWS_test)**: Vite + React TypeScript app for live monitor, dataset browser, ML predictor, and the fungi chatbot UI.
 - **Chatbot Backend (Backend/server)**: Express server that calls a local Ollama LLM and (optionally) the ML API, returning expert guidance.
 - **ML API (Backend/ML model)**: Model-serving layer that predicts harvest cycle and yield category from sensor data.
@@ -20,6 +21,7 @@ Data flow (typical):
 - Chatbot Backend (Express): http://localhost:3001
 - ML API (Flask): http://localhost:3002
 - ML API (FastAPI alternative): http://localhost:8000
+- Frontend (FE, from master): http://localhost:8080
 - Frontend (AWS_test): http://localhost:5173
 - Ollama: http://localhost:11434
 
@@ -29,7 +31,7 @@ Use `start_all.py` to boot the default stack (Flask ML API + Express + AWS_test 
 Services:
 • ML Yield Predictor   - http://localhost:3002
 • Chatbot Backend      - http://localhost:3001
-• Frontend             - http://localhost:5173
+• Frontend             - http://localhost:5173  (AWS_test)
 • Ollama LLM           - http://localhost:11434
 ```
 
@@ -51,9 +53,53 @@ Services:
     - `fastapi_server.py` – Alternative FastAPI at `:8000` (used by ML Predictor page)
     - `pythonml.py` – Thin model wrapper (no HTTP)
     - `xgb_mushroom_model.joblib` – Trained model
-- `src/` – Additional modern React app (pages: Dashboard, LiveMonitor, etc.) with a built-in, UI-only chatbot widget
+- `FE/` – Modern React app (Vite + shadcn) that came from master
+  - `FE/src/`, `FE/index.html`, `FE/vite.config.ts`, `FE/tailwind.config.ts`, `FE/package.json`, etc.
+- `src/` – (Deprecated root location; contents were moved to `FE/` during reorg) Contains similar modern React app files in prior layout
 - `test_FE/` – Prior frontend test implementation (includes `types/sensor.ts` and `store/sensorHistory.ts` that mirror AWS_test needs)
 - `start_all.py` – Orchestration script
+
+
+## Frontends
+There are three frontend trees after merges; use the one that fits your flow.
+
+- FE (from master) – modern app (BrowserRouter, shadcn UI), dev server on port 8080:
+
+```7:12:S:\Projects\Datanyx-proj\FE\vite.config.ts
+export default defineConfig(({ mode }) => ({
+  server: {
+    host: "::",
+    port: 8080,
+  },
+```
+
+```35:59:S:\Projects\Datanyx-proj\FE\src\App.tsx
+<BrowserRouter>
+  <Routes>
+    <Route path="/" element={<Landing />} />
+    <Route path="/dashboard" element={<Dashboard />} />
+    <Route path="/live-monitor" element={<LiveMonitor />} />
+    ...
+  </Routes>
+  <ChatbotWrapper />
+</BrowserRouter>
+```
+
+- AWS_test – purpose-built for this project’s AWS integration, hash-based routing (Monitor, Dataset, ML Predictor, Chatbot), dev server on port 5173:
+
+```207:233:S:\Projects\Datanyx-proj\AWS_test\src\App.tsx
+const [route, setRoute] = useState<string>(() => window.location.hash || '#/monitor');
+...
+switch (route) {
+  case '#/history': return <SensorHistoryPage />;
+  case '#/chatbot': return <ChatbotPage />;
+  case '#/dataset': return <DatasetPage />;
+  case '#/predictor': return <MLPredictorPage />;
+  default: return <MushroomMonitorPage />;
+}
+```
+
+- test_FE – earlier test frontend (kept for reference), includes `store/sensorHistory.ts` and `types/sensor.ts` that AWS_test relies on conceptually.
 
 
 ## APIs
@@ -336,15 +382,18 @@ def prepare_features(data: dict) -> dict:
   - `PORT` (default 8000)
 - Frontend (AWS_test):
   - `VITE_FUNGI_DATASET_API` (optional override for dataset endpoint)
+- Frontend (FE):
+  - Uses path alias `@` → `./src` (see `FE/vite.config.ts`)
 
 
 ## Run Commands
 - One shot (recommended): `python start_all.py`
 - Individually:
+  - Frontend (FE): `cd FE && npm i && npm run dev`  → http://localhost:8080
   - ML API (Flask): `cd Backend/ML model && python ml_api.py`
   - ML API (FastAPI): `cd Backend/ML model && python fastapi_server.py`
   - Chatbot Backend: `cd Backend/server && npm run dev`
-  - Frontend: `cd AWS_test && npm run dev`
+  - Frontend (AWS_test): `cd AWS_test && npm i && npm run dev`  → http://localhost:5173/#/monitor
   - Ollama: `ollama serve` (+ `ollama pull llama3` if required)
 
 

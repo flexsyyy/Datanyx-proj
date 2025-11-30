@@ -22,9 +22,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useUnits } from "@/contexts/UnitsContext";
+import { useToast } from "@/hooks/use-toast";
 import { Thermometer, Droplets, Wind, Activity, Calendar, Plus } from "lucide-react";
 
-const shelters = [
+const initialShelters = [
   {
     id: "shelter-1",
     name: "Chamber A1",
@@ -64,23 +65,56 @@ const shelters = [
 ];
 
 export default function Shelters() {
+  const [shelters, setShelters] = useState(initialShelters);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [selectedShelter, setSelectedShelter] = useState<typeof shelters[0] | null>(null);
+  const [selectedShelter, setSelectedShelter] = useState<typeof initialShelters[0] | null>(null);
   const [newShelter, setNewShelter] = useState({
     name: "",
     species: "",
     stage: "spawn",
   });
   const { formatTemperature, temperatureUnit } = useUnits();
+  const { toast } = useToast();
 
   // Filter shelters for tabs
   const activeShelters = shelters.filter((s) => s.status === "optimal");
   const issuesShelters = shelters.filter((s) => s.status === "warning" || s.status === "critical");
 
   const handleAddShelter = () => {
-    // In a real app, this would add to the database
-    console.log("Adding shelter:", newShelter);
+    if (!newShelter.name || !newShelter.species) {
+      toast({
+        title: "Missing information",
+        description: "Please enter both shelter name and species.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Generate random sensor values for the new shelter
+    const randomTemp = 20 + Math.random() * 6; // 20-26°C
+    const randomHumidity = 75 + Math.random() * 15; // 75-90%
+    const randomCO2 = 800 + Math.random() * 600; // 800-1400 ppm
+    const randomHealth = 70 + Math.random() * 25; // 70-95%
+    
+    const newShelterData = {
+      id: `shelter-${Date.now()}`,
+      name: newShelter.name,
+      species: newShelter.species,
+      stage: newShelter.stage.charAt(0).toUpperCase() + newShelter.stage.slice(1),
+      temp: Math.round(randomTemp * 10) / 10,
+      humidity: Math.round(randomHumidity),
+      co2: Math.round(randomCO2),
+      health: Math.round(randomHealth),
+      status: randomHealth > 85 ? "optimal" : randomHealth > 70 ? "warning" : "critical",
+      lastEvent: "Shelter initialized",
+    };
+    
+    setShelters([...shelters, newShelterData]);
+    toast({
+      title: "Shelter created",
+      description: `${newShelter.name} has been added successfully.`,
+    });
     setIsAddModalOpen(false);
     setNewShelter({ name: "", species: "", stage: "spawn" });
   };

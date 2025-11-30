@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { UnitsProvider } from "./contexts/UnitsContext";
+import { DataProvider } from "./contexts/DataContext";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -34,30 +35,32 @@ function ChatbotWrapper() {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <UnitsProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/shelters" element={<Shelters />} />
-            <Route path="/alerts" element={<Alerts />} />
-            <Route path="/predict" element={<Predict />} />
-            <Route path="/live-monitor" element={<LiveMonitor />} />
-            <Route path="/compare" element={<Compare />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/recommendations" element={<Recommendations />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <ChatbotWrapper />
-        </BrowserRouter>
-      </TooltipProvider>
-    </UnitsProvider>
+    <DataProvider>
+      <UnitsProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Landing />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/shelters" element={<Shelters />} />
+              <Route path="/alerts" element={<Alerts />} />
+              <Route path="/predict" element={<Predict />} />
+              <Route path="/live-monitor" element={<LiveMonitor />} />
+              <Route path="/compare" element={<Compare />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/recommendations" element={<Recommendations />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <ChatbotWrapper />
+          </BrowserRouter>
+        </TooltipProvider>
+      </UnitsProvider>
+    </DataProvider>
   </QueryClientProvider>
 );
 

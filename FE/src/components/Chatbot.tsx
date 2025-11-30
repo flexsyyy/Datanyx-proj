@@ -12,16 +12,18 @@ interface Message {
   timestamp: Date;
 }
 
-const botResponses: Record<string, string> = {
-  temperature: "Optimal temperature for most mushrooms is 18-24°C (65-75°F). Oyster mushrooms prefer 18-22°C, while Shiitake thrive at 20-24°C. Monitor for sudden fluctuations!",
-  humidity: "Maintain 80-95% humidity during fruiting. Use a fine mist sprayer or humidifier. Too low causes dry caps; too high promotes contamination.",
-  co2: "Keep CO2 below 1000 ppm during fruiting. High CO2 causes long stems and small caps. Increase fresh air exchange if levels rise.",
-  contamination: "Green mold (Trichoderma) is the most common issue. Isolate affected areas immediately. Maintain sterile technique and proper air filtration.",
-  substrate: "Pasteurize substrate at 65-80°C for 1-2 hours. Common substrates: straw, sawdust, coffee grounds. Ensure proper moisture (65-70%).",
-  fruiting: "Trigger fruiting by: lowering temp slightly, increasing fresh air, maintaining high humidity, and providing indirect light (12hr cycles).",
-  harvest: "Harvest just before the veil breaks for best flavor and shelf life. Cut at the base, don't pull. Expect 2-4 flushes per substrate.",
-  default: "I'm your mushroom growing assistant! Ask me about temperature, humidity, CO2 levels, contamination, substrate preparation, fruiting conditions, or harvesting tips.",
-};
+interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
+interface ChatbotResponse {
+  reply: string;
+  newHistory: ChatMessage[];
+  error?: string;
+}
+
+const CHATBOT_API_URL = 'http://localhost:3001/api/chatbot/fungi';
 
 const suggestedQuestions = [
   "What's the ideal temperature?",
@@ -30,19 +32,6 @@ const suggestedQuestions = [
   "How to trigger fruiting?",
 ];
 
-function getBotResponse(input: string): string {
-  const lowerInput = input.toLowerCase();
-  if (lowerInput.includes("temp")) return botResponses.temperature;
-  if (lowerInput.includes("humid") || lowerInput.includes("mist")) return botResponses.humidity;
-  if (lowerInput.includes("co2") || lowerInput.includes("air")) return botResponses.co2;
-  if (lowerInput.includes("contam") || lowerInput.includes("mold") || lowerInput.includes("green")) return botResponses.contamination;
-  if (lowerInput.includes("substrate") || lowerInput.includes("medium")) return botResponses.substrate;
-  if (lowerInput.includes("fruit") || lowerInput.includes("pin")) return botResponses.fruiting;
-  if (lowerInput.includes("harvest") || lowerInput.includes("pick")) return botResponses.harvest;
-  if (lowerInput.includes("hello") || lowerInput.includes("hi") || lowerInput.includes("help")) return botResponses.default;
-  return "I can help with mushroom cultivation! Try asking about temperature, humidity, CO2, contamination, substrate, fruiting, or harvesting.";
-}
-
 export function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -50,6 +39,8 @@ export function Chatbot() {
   ]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -60,7 +51,7 @@ export function Chatbot() {
     scrollToBottom();
   }, [messages]);
 
-  const handleSend = (text?: string) => {
+  const handleSend = async (text?: string) => {
     const messageText = text || input;
     if (!messageText.trim()) return;
 
@@ -74,18 +65,55 @@ export function Chatbot() {
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsTyping(true);
+    setError(null);
 
-    // Simulate bot typing delay
-    setTimeout(() => {
-      const botMessage: Message = {
+    try {
+      const response = await fetch(CHATBOT_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userMessage: messageText,
+          chatHistory: chatHistory,
+        }),
+      });
+
+      const data: ChatbotResponse = await response.json();
+
+      if (data.error) {
+        setError(data.error);
+        const errorMessage: Message = {
+          id: messages.length + 2,
+          text: `Error: ${data.error}`,
+          isBot: true,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+      } else {
+        // Update chat history
+        setChatHistory(data.newHistory);
+
+        // Convert chat history to display messages
+        const botMessage: Message = {
+          id: messages.length + 2,
+          text: data.reply,
+          isBot: true,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, botMessage]);
+      }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to get response';
+      setError(errorMsg);
+      const errorMessage: Message = {
         id: messages.length + 2,
-        text: getBotResponse(messageText),
+        text: `Error: ${errorMsg}. Please ensure the chatbot server is running on port 3001.`,
         isBot: true,
         timestamp: new Date(),
       };
-      setMessages((prev) => [...prev, botMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsTyping(false);
-    }, 800);
+    }
   };
 
   return (
@@ -128,8 +156,9 @@ export function Chatbot() {
                   </div>
                 )}
                 <div className={cn(
-                  "max-w-[75%] p-3 rounded-2xl text-sm",
-                  msg.isBot ? "bg-card border border-border rounded-tl-sm" : "bg-primary text-primary-foreground rounded-tr-sm"
+                  "max-w-[75%] p-3 rounded-2xl text-sm whitespace-pre-wrap",
+                  msg.isBot ? "bg-card border border-border rounded-tl-sm" : "bg-primary text-primary-foreground rounded-tr-sm",
+                  msg.text.startsWith("Error:") && "bg-destructive/10 border-destructive/20 text-destructive"
                 )}>
                   {msg.text}
                 </div>

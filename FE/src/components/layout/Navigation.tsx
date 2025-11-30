@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SettingsPanel } from "@/components/SettingsPanel";
+import { useDataContext } from "@/contexts/DataContext";
 import {
   LayoutDashboard,
   Home,
@@ -22,33 +23,16 @@ import {
   Droplets,
 } from "lucide-react";
 
-// Sample notifications data
-const notifications = [
-  {
-    id: 1,
-    title: "High Temperature Alert",
-    message: "Chamber A1 temperature exceeded 28°C",
-    time: "5 min ago",
-    type: "critical",
-    icon: Thermometer,
-  },
-  {
-    id: 2,
-    title: "Humidity Warning",
-    message: "Chamber B2 humidity dropped below 75%",
-    time: "15 min ago",
-    type: "warning",
-    icon: Droplets,
-  },
-  {
-    id: 3,
-    title: "System Update",
-    message: "New firmware available for sensors",
-    time: "1 hour ago",
-    type: "info",
-    icon: AlertTriangle,
-  },
-];
+const getIconForSeverity = (severity: string) => {
+  switch (severity) {
+    case 'critical':
+      return AlertTriangle;
+    case 'warning':
+      return Thermometer;
+    default:
+      return Droplets;
+  }
+};
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -70,6 +54,17 @@ export function Navigation() {
   const location = useLocation();
   const navigate = useNavigate();
   const navRef = useRef<HTMLDivElement>(null);
+  const { alerts } = useDataContext();
+  
+  // Map alerts to notification format
+  const notifications = alerts.slice(0, 5).map(alert => ({
+    id: alert.id,
+    title: alert.title,
+    message: alert.message,
+    time: alert.time,
+    type: alert.severity,
+    icon: getIconForSeverity(alert.severity),
+  }));
 
   // Hide nav on landing, login, and signup pages
   const hideNavPaths = ["/", "/login", "/signup"];
@@ -181,7 +176,11 @@ export function Navigation() {
                     className="h-10 w-10 rounded-lg relative"
                   >
                     <Bell className="h-5 w-5" />
-                    <span className="absolute top-1 right-1 h-2 w-2 bg-critical rounded-full animate-pulse" />
+                    {alerts.length > 0 && (
+                      <span className="absolute -top-1 -right-1 h-5 w-5 bg-critical text-white text-xs font-bold rounded-full flex items-center justify-center">
+                        {alerts.length > 9 ? '9+' : alerts.length}
+                      </span>
+                    )}
                   </Button>
                 </PopoverTrigger>
               <PopoverContent className="w-80 p-0" align="end">

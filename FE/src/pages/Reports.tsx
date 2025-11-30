@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Download, TrendingUp, TrendingDown, BarChart3, Calendar as CalendarIcon, FileDown } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { format, subDays, isWithinInterval, startOfDay, endOfDay, parseISO } from "date-fns";
@@ -27,6 +27,17 @@ import {
   Scatter,
   Cell,
 } from "recharts";
+
+interface AWSDataPoint {
+  temp_C: string | number;
+  humidity_pct: string | number;
+  CO2_ppm: string | number;
+  harvest_cycle: string | number;
+  timestamp?: string;
+  mushroom_variety?: string;
+}
+
+const AWS_API_URL = 'https://wcwmzfhxsc.execute-api.ap-south-1.amazonaws.com/prod/dataset';
 
 // Generate sample data for charts
 const generateYieldData = () => {
@@ -67,8 +78,23 @@ const generateCorrelationData = () => {
   return params;
 };
 
-const yieldData = generateYieldData();
-const environmentData = generateEnvironmentData();
+// Helper to load/save session data
+const loadSessionData = (key: string, defaultValue: any) => {
+  const stored = sessionStorage.getItem(key);
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch (error) {
+      return defaultValue;
+    }
+  }
+  return defaultValue;
+};
+
+const saveSessionData = (key: string, data: any) => {
+  sessionStorage.setItem(key, JSON.stringify(data));
+};
+
 const correlationData = generateCorrelationData();
 
 export default function Reports() {
@@ -78,6 +104,86 @@ export default function Reports() {
   });
   const { toast } = useToast();
   const { formatWeight, formatTemperature, weightUnit, temperatureUnit } = useUnits();
+  
+  // State for AWS data with sessionStorage persistence
+  const [yieldData, setYieldData] = useState(() => loadSessionData('reportsYieldData', generateYieldData()));
+  const [environmentData, setEnvironmentData] = useState(() => loadSessionData('reportsEnvironmentData', generateEnvironmentData()));
+  const [totalYield, setTotalYield] = useState(() => loadSessionData('reportsTotalYield', 847));
+  const [avgEfficiency, setAvgEfficiency] = useState(() => loadSessionData('reportsAvgEfficiency', 78));
+  const [activeBatches, setActiveBatches] = useState(() => loadSessionData('reportsActiveBatches', 4));
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Fetch data from AWS and slowly add to charts
+  useEffect(() => {
+    const fetchAndUpdateData = async () => {
+      try {
+        const response = await fetch(`${AWS_API_URL}?limit=1`);
+        if (!response.ok) return;
+        
+        const result = await response.json();
+        const awsData: AWSDataPoint[] = result.value || result;
+        
+        if (awsData && awsData.length > 0) {
+          const point = awsData[0];
+          const newDate = format(new Date(), "yyyy-MM-dd");
+          
+          // Convert harvest cycle to yield (3-6 cycle maps to yield)
+          const harvestCycle = parseFloat(point.harvest_cycle as any) || 4;
+          const yieldValue = 30 + (harvestCycle * 6); // Scale cycle to yield
+          
+          // Add new yield data point
+          setYieldData((prev) => {
+            const updated = [...prev, {
+              date: newDate,
+              yield: yieldValue + Math.random() * 5,
+              target: 50,
+            }];
+            saveSessionData('reportsYieldData', updated);
+            
+            // Update total yield slowly
+            const newTotal = updated.reduce((sum, d) => sum + d.yield, 0);
+            setTotalYield(Math.round(newTotal));
+            saveSessionData('reportsTotalYield', Math.round(newTotal));
+            
+            return updated;
+          });
+          
+          // Add new environment data point
+          setEnvironmentData((prev) => {
+            const updated = [...prev, {
+              date: newDate,
+              temperature: parseFloat(point.temp_C as any) || 22,
+              humidity: parseFloat(point.humidity_pct as any) || 85,
+              co2: parseFloat(point.CO2_ppm as any) || 900,
+            }];
+            saveSessionData('reportsEnvironmentData', updated);
+            return updated;
+          });
+          
+          // Update efficiency slowly (varies between 75-85%)
+          setAvgEfficiency((prev) => {
+            const newEff = Math.min(85, Math.max(75, prev + (Math.random() * 2 - 1)));
+            saveSessionData('reportsAvgEfficiency', Math.round(newEff));
+            return Math.round(newEff);
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch AWS data for reports:', error);
+      }
+    };
+
+    // Update every 15 seconds (simulating daily data)
+    intervalRef.current = setInterval(fetchAndUpdateData, 15000);
+    
+    // Initial fetch
+    fetchAndUpdateData();
+    
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
 
   // Filter data based on date range
   const filteredYieldData = useMemo(() => {
@@ -193,7 +299,7 @@ export default function Reports() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Yield</p>
-                <p className="text-3xl font-bold text-foreground mt-1">{formatWeight(847)}</p>
+                <p className="text-3xl font-bold text-foreground mt-1">{formatWeight(totalYield)}</p>
                 <div className="flex items-center gap-1 mt-2 text-success">
                   <TrendingUp className="h-4 w-4" />
                   <span className="text-sm font-medium">+18%</span>
